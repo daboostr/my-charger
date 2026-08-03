@@ -1,0 +1,16 @@
+# Local secrets / env files - never commit real credentials
+**/.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor/OS cruft
+.DS_Store
+.vscode/
+*.swp
+
+# Anything a contributor might accidentally drop in while testing locally
+**/entities.local.yaml
+**/layout.local.json

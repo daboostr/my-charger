@@ -1,0 +1,994 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #0A0C0F;
+  --surface: #15181D;
+  --surface-2: #1C2027;
+  --border: #232830;
+  --text: #F2F4F5;
+  --text-dim: #8B94A0;
+  --volt: #C8FF4D;
+  --volt-dim: #7C9A2E;
+  --danger: #FF5D5D;
+  --font-display: 'Rajdhani', sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+
+  /* Fixed header/footer heights, kept as variables so the scroll-area's
+     offsetting padding can never drift out of sync with the bars themselves. */
+  --header-h: 56px;
+  --edit-bar-h: 40px;
+  --footer-h: 76px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  height: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+button { font-family: inherit; }
+
+/* ---------- Login screen ---------- */
+
+#login-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 24px;
+}
+
+#login-screen h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+
+#login-screen .subtitle {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-top: -14px;
+}
+
+#login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+}
+
+#login-form input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+#login-form input:focus {
+  outline: none;
+  border-color: var(--volt-dim);
+}
+
+#login-form button, .action-primary {
+  background: var(--volt);
+  color: #0A0C0F;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#login-error {
+  color: var(--danger);
+  font-size: 13px;
+  min-height: 16px;
+}
+
+/* ---------- App shell ---------- */
+
+#app {
+  display: none;
+  position: fixed;
+  inset: 0;
+}
+
+#app.visible { display: block; }
+
+header.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: calc(var(--header-h) + env(safe-area-inset-top));
+  padding: calc(env(safe-area-inset-top) + 10px) 20px 10px;
+  box-sizing: border-box;
+  background: rgba(10, 12, 15, 0.72);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid rgba(35, 40, 48, 0.6);
+}
+
+.vehicle-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.status-dot.live { background: var(--volt); box-shadow: 0 0 8px var(--volt); }
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---------- Scroll area (everything between the fixed header and the
+   fixed command bar) ---------- */
+
+.scroll-area {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: calc(var(--header-h) + env(safe-area-inset-top) + 10px);
+  padding-bottom: calc(var(--footer-h) + env(safe-area-inset-bottom) + 12px);
+  transition: padding-top 0.15s ease;
+}
+
+#app.editing .scroll-area {
+  padding-top: calc(var(--header-h) + env(safe-area-inset-top) + var(--edit-bar-h) + 10px);
+}
+
+/* ---------- Fixed bottom command row ---------- */
+
+.command-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: calc(var(--footer-h) + env(safe-area-inset-bottom));
+  padding: 8px 12px calc(env(safe-area-inset-bottom) + 8px);
+  box-sizing: border-box;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  background: rgba(10, 12, 15, 0.72);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-top: 1px solid rgba(35, 40, 48, 0.6);
+}
+
+.command-bar::-webkit-scrollbar { display: none; }
+
+/* Inner flex row — centered when it fits, scrolls when it doesn't */
+.command-bar-inner {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-shrink: 0;
+  /* Explicit height so cmd-tile-wrap height:100% resolves consistently */
+  height: calc(var(--footer-h) - 16px);
+}
+
+.cmd-tile-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: 64px;
+  height: 100%;
+}
+
+.cmd-tile-wrap.widget-hidden { opacity: 0.35; }
+
+.command-bar .cmd-tile {
+  width: 100%;
+  height: 100%;
+  padding: 6px 4px;
+}
+
+.cmd-tile-wrap .cmd-tile-eye {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+}
+
+.cmd-tile-wrap .cmd-tile-eye svg { width: 12px; height: 12px; }
+
+/* While editing, tapping a command tile shouldn't fire the command - only
+   its eye toggle should be interactive, matching the dashboard grid's
+   edit-mode behavior. */
+#app.editing .cmd-tile-wrap .cmd-tile { pointer-events: none; }
+
+/* ---------- Hero — battery gauge ---------- */
+
+.hero {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 12px 14px 8px;
+  gap: 18px;
+  height: 100%;
+}
+
+/* Left column: battery visual + labels */
+.hero-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 96px;
+}
+
+/* Right column: inline mini-stats */
+.hero-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  gap: 0;
+}
+
+/* SoC percentage above battery */
+.batt-pct {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.batt-pct-unit {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-left: 1px;
+}
+
+/* Battery shape */
+.batt-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.batt-nub {
+  width: 20px;
+  height: 5px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px 2px 0 0;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  border-bottom: none;
+}
+
+.batt-case {
+  width: 52px;
+  height: 120px;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+}
+
+.batt-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0%;
+  background: #007AFF;
+  transition: height 0.6s ease;
+  box-shadow: 0 -6px 20px rgba(0,122,255,0.45);
+}
+
+/* Tick marks at 20%, 40%, 60%, 80% */
+.batt-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255,255,255,0.18);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* kWh label below battery */
+.batt-kwh {
+  margin-top: 7px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+/* Landscape charge status: hidden in portrait (it lives inside hero-right-items) */
+.hero-landscape-status { display: none; }
+
+@media (orientation: landscape) {
+  .command-bar { justify-content: center; }
+
+  .hero-portrait-status { display: none; }
+
+  /* In landscape the charge status is item 1 of the hero-right-items grid */
+  .hero-landscape-status {
+    display: flex;
+    flex-direction: column;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  /* 2-column grid flowing down: items 1-3 → col 1, items 4-6 → col 2 */
+  .hero-right-items {
+    display: grid;
+    grid-template-rows: repeat(3, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 0;
+  }
+  /* Right border + spacing between the two columns */
+  .hero-right-items > *:nth-child(-n+3) {
+    border-right: 1px solid var(--border);
+    padding-right: 10px;
+    margin-right: 10px;
+  }
+}
+
+/* Merged charging + port status */
+.batt-charge-status {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.batt-charge-line1 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+}
+
+.batt-charge-line2 {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+
+.batt-charge-status.active .batt-charge-line1,
+.batt-charge-status.active .batt-charge-line2 {
+  color: #007AFF;
+}
+
+/* Range line — now sits in hero-left below kWh */
+.range-line {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 3px;
+  text-align: center;
+}
+
+.range-line b { color: var(--text); font-weight: 600; }
+
+/* Mini-stat rows in hero-right */
+.hero-mini-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-mini-stat:last-child { border-bottom: none; }
+
+.hero-mini-label {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 1px;
+}
+
+.hero-mini-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-mini-value-sm { font-size: 13px; }
+
+/* ---------- Tile grid ---------- */
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 16px 20px;
+}
+
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+.tile-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.tile-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.tile-value.warn { color: var(--danger); }
+
+.tire-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 14px;
+  margin-top: 4px;
+}
+
+.tire-cell {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.tire-pos {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+
+.tire-psi {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.tire-psi.warn { color: var(--danger); }
+
+.charge-time-val {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.tile-value-small { font-size: 15px; }
+
+/* Tire grid: align content to top so label matches other tiles */
+.grid-stack-item-content.widget-tire_grid > .tile {
+  justify-content: flex-start;
+  padding-top: 10px;
+}
+
+/* ---------- Combined L1/L2/L3 charge-time tile ---------- */
+
+.charge-times-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.charge-times-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex: 1;
+}
+
+/* ---------- Vehicle photo banner (portrait only) ---------- */
+
+#vehicle-photo-banner {
+  width: 100%;
+  padding: 0 12px 4px;
+  box-sizing: border-box;
+}
+
+#vehicle-photo-banner img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  display: block;
+}
+
+@media (orientation: landscape) {
+  #vehicle-photo-banner { display: none; }
+}
+
+/* Settings photo preview */
+#settings-photo-preview-wrap {
+  padding: 0 0 8px;
+}
+
+#settings-photo-preview {
+  width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: var(--surface-2);
+  display: block;
+}
+
+.settings-photo-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ---------- Individual command button tiles (replaces the old bottom bar) ---------- */
+
+.cmd-tile {
+  width: 100%;
+  height: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.cmd-tile:active { transform: scale(0.94); border-color: var(--volt-dim); }
+.cmd-tile-icon svg { width: 20px; height: 20px; stroke: var(--volt); display: block; }
+.cmd-tile.pending { opacity: 0.5; pointer-events: none; }
+.cmd-tile.unavailable { opacity: 0.35; }
+.cmd-tile.unavailable .cmd-tile-icon svg { stroke: var(--text-dim); }
+
+/* ---------- Charge-speed cycle control ---------- */
+
+.select-cycle-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.select-cycle-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.select-cycle-btn:disabled { opacity: 0.3; }
+
+/* ---------- Location ---------- */
+
+.location-row {
+  margin: 0 20px 16px;
+}
+
+.location-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.location-link span.dim { color: var(--text-dim); font-size: 12px; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--footer-h) + env(safe-area-inset-bottom) + 16px);
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.toast.show { opacity: 1; }
+
+.logout-link {
+  color: var(--text-dim);
+  font-size: 11px;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ---------- Gridstack dashboard integration ---------- */
+
+.grid-stack { background: transparent; }
+
+.grid-stack-item-content {
+  background: transparent;
+  overflow: hidden;
+}
+
+.grid-stack-item-content > .tile,
+.grid-stack-item-content > .hero,
+.grid-stack-item-content > .location-row {
+  height: 100%;
+  margin: 0;
+}
+
+.grid-stack-item-content > .tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.grid-stack-item-content > .hero {
+  padding: 10px 12px;
+}
+
+.grid-stack-item-content > .location-row .location-link { height: 100%; }
+
+/* ---------- Topbar icon buttons (settings gear, edit-layout toggle) ---------- */
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn:active { color: var(--volt); }
+
+/* ---------- Edit-layout mode ---------- */
+
+.edit-bar {
+  display: none;
+  position: fixed;
+  top: calc(var(--header-h) + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  z-index: 19;
+  height: var(--edit-bar-h);
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.edit-bar-done {
+  background: var(--volt);
+  color: #0A0C0F;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#app.editing .edit-bar { display: flex; }
+#app.editing #edit-layout-btn { display: none; }
+
+#app.editing .grid-stack-item-content {
+  border: 1px dashed var(--volt-dim);
+  border-radius: 14px;
+}
+
+/* Disable taps on widget internals (Lock button, map link, etc.) while
+   arranging, so dragging a tile can't accidentally fire a command. */
+#app.editing .grid-stack-item-content > * { pointer-events: none; }
+#app.editing .widget-eye-btn { pointer-events: auto; }
+
+.widget-eye-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(10, 12, 15, 0.75);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.widget-eye-btn svg { width: 15px; height: 15px; }
+
+.widget-hidden { opacity: 0.35; }
+
+/* ---------- Settings (entity mapping) + entity picker overlays ---------- */
+
+#settings-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 100;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+#settings-screen.open { display: flex; }
+
+.settings-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.settings-body { flex: 1; overflow-y: auto; padding: 8px 20px 24px; }
+
+.settings-body h2 {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 20px 0 10px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+
+.settings-row-label { font-size: 14px; font-weight: 600; }
+
+.settings-row-value {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  word-break: break-all;
+}
+
+.settings-row-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Settings screen ─────────────────────────────────────────────────────── */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.info-row:first-child { border-top: 1px solid var(--border); }
+.info-label { font-size: 14px; color: var(--text-dim); flex-shrink: 0; }
+.info-value { font-size: 15px; font-weight: 600; text-align: right; word-break: break-all; }
+.info-value-mono { font-family: monospace; font-size: 13px; }
+.info-value-small { font-size: 13px; font-weight: 400; color: var(--text-dim); }
+.info-actions { padding-top: 24px; }
+.toggle-group {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 7px 14px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.toggle-btn:last-child { border-right: none; }
+
+.toggle-btn.active {
+  background: var(--volt);
+  color: #0A0C0F;
+  font-weight: 600;
+}
+
+.settings-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 14px;
+  font-family: var(--font-body);
+}
+
+.settings-input:focus { outline: none; border-color: var(--volt-dim); }
+
+
+/* ---------- Command bar drag-to-reorder (edit mode) ---------- */
+
+.cmd-tile-wrap[draggable="true"] { cursor: grab; }
+
+.cmd-tile-wrap.cmd-dragging {
+  opacity: 0.35;
+  cursor: grabbing;
+}
+
+.cmd-tile-wrap.cmd-drag-over > .cmd-tile {
+  border-color: var(--volt);
+  box-shadow: 0 0 0 2px rgba(200, 255, 77, 0.25);
+}
+
+/* ---------- Hero Data settings ---------- */
+
+.hero-right-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.hero-right-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hero-right-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--volt);
+  flex-shrink: 0;
+}
+
+.hero-right-option.at-limit {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.hero-right-option.at-limit input { pointer-events: none; }
+
+.action-danger {
+  width: 100%;
+  padding: 14px;
+  background: rgba(255, 93, 93, 0.12);
+  border: 1px solid rgba(255, 93, 93, 0.35);
+  border-radius: 12px;
+  color: var(--danger, #ff5d5d);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
