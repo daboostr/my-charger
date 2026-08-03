@@ -1,4 +1,4 @@
-# Charger PWA
+# Dodge PWA
 
 A Progressive Web App for Dodge/Stellantis Uconnect vehicles — charge status, range, tire pressures, location, remote commands (lock/unlock, climate, charge now, etc.) — running entirely on Cloudflare with no server to maintain.
 
