@@ -214,6 +214,22 @@ function getWorkerUrl() {
   return (localStorage.getItem(WORKER_KEY) || '').replace(/\/$/, '');
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Backend mode
+// ─────────────────────────────────────────────────────────────────────────────
+// "direct" = Android app talking to Stellantis itself (no Cloudflare).
+// "proxy"  = browser talking to the Cloudflare Worker, which is mandatory on
+// the web because Stellantis serves no CORS headers.
+
+async function isDirectMode() {
+  if (!window.Charger) return false;
+  try {
+    return (await window.Charger.getMode()) === 'direct';
+  } catch {
+    return false;
+  }
+}
+
 async function workerFetch(method, path, body = null) {
   const password = getStoredPassword();
   const opts = {
@@ -232,6 +248,11 @@ async function workerFetch(method, path, body = null) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function checkSession() {
+  // Native direct mode needs no Worker and no app password — the Uconnect
+  // credentials on the device are the only thing standing between the user and
+  // their vehicle, and they're held in the Android Keystore.
+  if (await isDirectMode()) { await showApp(); return; }
+
   const password  = getStoredPassword();
   const workerUrl = getWorkerUrl();
   if (!password || !workerUrl) { showLogin(); return; }
@@ -312,15 +333,18 @@ async function initApp() {
 
   if (!currentVin) {
     try {
-      const res = await workerFetch('GET', '/vehicles');
-      if (res.ok) {
-        const vehicles = await res.json();
-        if (vehicles && vehicles.length > 0) {
-          currentVin  = vehicles[0].vin;
-          vehicleName = vehicles[0].nickname || vehicles[0].modelDescription || 'Dodge';
-          localStorage.setItem(VIN_KEY,   currentVin);
-          localStorage.setItem(VNAME_KEY, vehicleName);
-        }
+      let vehicles = null;
+      if (await isDirectMode()) {
+        vehicles = await window.Charger.vehicleApi.listVehicles();
+      } else {
+        const res = await workerFetch('GET', '/vehicles');
+        if (res.ok) vehicles = await res.json();
+      }
+      if (vehicles && vehicles.length > 0) {
+        currentVin  = vehicles[0].vin;
+        vehicleName = vehicles[0].nickname || vehicles[0].modelDescription || 'Dodge';
+        localStorage.setItem(VIN_KEY,   currentVin);
+        localStorage.setItem(VNAME_KEY, vehicleName);
       }
     } catch { /* proceed anyway; fetchAndRender will show offline */ }
   }
@@ -347,20 +371,33 @@ function stopPolling() {
 async function fetchAndRender() {
   if (!currentVin) { setStatus(false); return; }
   try {
-    const res = await workerFetch('GET', `/vehicles/${currentVin}/status`);
-    if (res.status === 401) {
-      // Password no longer valid — kick back to login
-      stopPolling();
-      localStorage.removeItem(PASSWORD_KEY);
-      showLogin();
-      return;
+    let data;
+
+    if (await isDirectMode()) {
+      data = await window.Charger.vehicleApi.getStatus(currentVin);
+    } else {
+      const res = await workerFetch('GET', `/vehicles/${currentVin}/status`);
+      if (res.status === 401) {
+        // Password no longer valid — kick back to login
+        stopPolling();
+        localStorage.removeItem(PASSWORD_KEY);
+        showLogin();
+        return;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      data = await res.json();
     }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data     = await res.json();
+
     const snapshot = buildSnapshot(data);
     render(snapshot);
     lastRefresh = new Date();
     setStatus(true);
+
+    // Persist to the synced folder. Deliberately not awaited: history is a
+    // side-benefit and must never slow down or break the live dashboard.
+    if (window.Charger) {
+      window.Charger.recordSnapshot(data, currentVin).catch(() => {});
+    }
   } catch {
     setStatus(false);
   }
@@ -1078,8 +1115,12 @@ function renderSelectCycle(root, w, s) {
 
 async function setChargeSpeed(option) {
   try {
-    const res = await workerFetch('POST', `/vehicles/${currentVin}/charge-preference`, { level: option });
-    if (!res.ok) throw new Error();
+    if (await isDirectMode()) {
+      await window.Charger.vehicleApi.setChargePreference(currentVin, option);
+    } else {
+      const res = await workerFetch('POST', `/vehicles/${currentVin}/charge-preference`, { level: option });
+      if (!res.ok) throw new Error();
+    }
     showToast(`Charge speed: ${prettyChargeLevel(option)}`);
     fetchAndRender();
   } catch {
@@ -1158,8 +1199,12 @@ async function runCommand(name, btn) {
   }
   btn.classList.add('pending');
   try {
-    const res = await workerFetch('POST', `/vehicles/${currentVin}/command`, { command: uconnectCmd });
-    if (!res.ok) throw new Error();
+    if (await isDirectMode()) {
+      await window.Charger.vehicleApi.sendCommand(currentVin, uconnectCmd);
+    } else {
+      const res = await workerFetch('POST', `/vehicles/${currentVin}/command`, { command: uconnectCmd });
+      if (!res.ok) throw new Error();
+    }
     showToast(`${COMMAND_LABELS[name] || name} sent`);
   } catch {
     showToast(`Failed to send ${COMMAND_LABELS[name] || name}`);
@@ -1236,6 +1281,8 @@ function openInfo() {
   document.getElementById('info-last-refresh').textContent = lastRefresh
     ? lastRefresh.toLocaleTimeString()
     : '--';
+
+  refreshNativeSettings();
 
   // Populate vehicle name input
   document.getElementById('settings-vehicle-name').value = vehicleName;
@@ -1425,6 +1472,240 @@ if (installBtn) {
     deferredInstallPrompt = null;
     if (outcome !== 'accepted' && installRow) installRow.style.display = 'none';
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Native mode: credentials, synced folder, driving history
+// ─────────────────────────────────────────────────────────────────────────────
+// Everything below no-ops on the web build, where window.Charger reports the
+// native pieces as unavailable and the app keeps using the Cloudflare Worker.
+
+async function refreshNativeSettings() {
+  const wrap = document.getElementById('native-settings');
+  if (!wrap || !window.Charger) return;
+
+  if (!window.Charger.isNative) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+
+  const configured = await window.Charger.credentials.isConfigured();
+  document.getElementById('connection-mode-value').textContent = configured
+    ? 'Direct to vehicle (no Cloudflare)'
+    : 'Using Cloudflare Worker';
+  document.getElementById('settings-uconnect-btn').textContent = configured ? 'Change' : 'Set up';
+
+  const folder = await window.Charger.historyStore.folderName();
+  document.getElementById('folder-status-value').textContent = folder || 'Not set';
+  document.getElementById('settings-folder-btn').textContent = folder ? 'Change' : 'Choose';
+}
+
+function openUconnectSetup() {
+  document.getElementById('uconnect-error').textContent = '';
+  document.getElementById('uconnect-screen').classList.add('visible');
+  if (!window.Charger) return;
+  // Pre-fill the identifying fields, but never the password or PIN.
+  window.Charger.credentials.get('uconnect_email').then(v => {
+    if (v) document.getElementById('uconnect-email').value = v;
+  });
+}
+
+function closeUconnectSetup() {
+  document.getElementById('uconnect-screen').classList.remove('visible');
+}
+
+async function saveUconnectCredentials(e) {
+  e.preventDefault();
+  const email = document.getElementById('uconnect-email').value.trim();
+  const password = document.getElementById('uconnect-password').value;
+  const pin = document.getElementById('uconnect-pin').value.trim();
+  const errorEl = document.getElementById('uconnect-error');
+  const saveBtn = document.getElementById('uconnect-save');
+
+  errorEl.textContent = '';
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Verifying…';
+
+  try {
+    // Verify before saving so a typo surfaces here rather than as a silently
+    // broken dashboard later.
+    await window.Charger.vehicleApi.verifyDirectCredentials(email, password);
+    await window.Charger.credentials.set('uconnect_email', email);
+    await window.Charger.credentials.set('uconnect_password', password);
+    if (pin) await window.Charger.credentials.set('uconnect_pin', pin);
+
+    showToast('Connected to your vehicle account');
+    closeUconnectSetup();
+    await refreshNativeSettings();
+
+    stopPolling();
+    currentVin = null;
+    localStorage.removeItem(VIN_KEY);
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    await initApp();
+  } catch (err) {
+    errorEl.textContent = err.message || 'Could not sign in';
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Verify & Save';
+  }
+}
+
+async function clearUconnectCredentials() {
+  await window.Charger.credentials.remove('uconnect_email');
+  await window.Charger.credentials.remove('uconnect_password');
+  await window.Charger.credentials.remove('uconnect_pin');
+  await window.Charger.credentials.remove('session_session');
+  showToast('Credentials removed');
+  closeUconnectSetup();
+  await refreshNativeSettings();
+}
+
+async function chooseHistoryFolder() {
+  try {
+    await window.Charger.historyStore.chooseFolder();
+    showToast('History folder set');
+    await refreshNativeSettings();
+    updateHistoryButton();
+  } catch (err) {
+    showToast(err.message || 'Could not set folder');
+  }
+}
+
+async function updateHistoryButton() {
+  const btn = document.getElementById('history-btn');
+  if (!btn || !window.Charger) return;
+  const ready = window.Charger.folderAvailable && await window.Charger.historyStore.isReady();
+  btn.style.display = ready ? '' : 'none';
+}
+
+// ─── History screen ──────────────────────────────────────────────────────────
+
+let historyRangeDays = 7;
+
+function fmtDistance(km) {
+  if (km == null) return '--';
+  return getUnits() === 'imperial'
+    ? `${(km * 0.621371).toFixed(1)} mi`
+    : `${km.toFixed(1)} km`;
+}
+
+function fmtEfficiency(kmPerKwh) {
+  if (kmPerKwh == null) return '--';
+  return getUnits() === 'imperial'
+    ? `${(kmPerKwh * 0.621371).toFixed(1)} mi/kWh`
+    : `${kmPerKwh.toFixed(1)} km/kWh`;
+}
+
+function fmtDuration(ms) {
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return `${mins}m`;
+  return `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m`;
+}
+
+async function openHistory() {
+  document.getElementById('history-screen').classList.add('visible');
+  await renderHistory();
+}
+
+function closeHistory() {
+  document.getElementById('history-screen').classList.remove('visible');
+}
+
+async function renderHistory() {
+  const summaryEl = document.getElementById('history-summary');
+  const tripsEl   = document.getElementById('history-trips');
+  const chargesEl = document.getElementById('history-charges');
+
+  summaryEl.innerHTML = '<div class="history-empty">Loading…</div>';
+  tripsEl.innerHTML = '';
+  chargesEl.innerHTML = '';
+
+  const batteryKwh = parseFloat(localStorage.getItem(BATTERY_KEY)) || null;
+  const sinceMs = historyRangeDays ? Date.now() - historyRangeDays * 86400000 : undefined;
+
+  let data;
+  try {
+    data = await window.Charger.loadHistory({ sinceMs, batteryKwh });
+  } catch (err) {
+    summaryEl.innerHTML = `<div class="history-empty">Could not read history: ${err.message}</div>`;
+    return;
+  }
+
+  const s = data.summary;
+  summaryEl.innerHTML = `
+    <div class="stat-card"><div class="stat-label">Distance</div><div class="stat-value">${fmtDistance(s.distanceKm)}</div></div>
+    <div class="stat-card"><div class="stat-label">Trips</div><div class="stat-value">${s.tripCount}</div></div>
+    <div class="stat-card"><div class="stat-label">Efficiency</div><div class="stat-value">${fmtEfficiency(s.efficiencyKmPerKwh)}</div></div>
+    <div class="stat-card"><div class="stat-label">Energy added</div><div class="stat-value">${s.kwhAdded != null ? s.kwhAdded.toFixed(1) + ' kWh' : '--'}</div></div>
+  `;
+
+  if (!data.trips.length) {
+    tripsEl.innerHTML = '<div class="history-empty">No trips recorded yet. History builds up while the app runs.</div>';
+  } else {
+    tripsEl.innerHTML = data.trips.slice().reverse().map(t => `
+      <div class="history-row">
+        <div class="history-row-main">
+          <div class="history-row-title">${fmtDistance(t.distanceKm)}</div>
+          <div class="history-row-sub">${new Date(t.start).toLocaleString()} · ${fmtDuration(t.end - t.start)}</div>
+        </div>
+        <div class="history-row-value">${t.startSoc != null && t.endSoc != null ? `${Math.round(t.startSoc)}% → ${Math.round(t.endSoc)}%` : ''}</div>
+      </div>
+    `).join('');
+  }
+
+  if (!data.sessions.length) {
+    chargesEl.innerHTML = '<div class="history-empty">No charge sessions recorded yet.</div>';
+  } else {
+    chargesEl.innerHTML = data.sessions.slice().reverse().map(c => `
+      <div class="history-row">
+        <div class="history-row-main">
+          <div class="history-row-title">+${Math.round(c.endSoc - c.startSoc)}%</div>
+          <div class="history-row-sub">${new Date(c.start).toLocaleString()} · ${fmtDuration(c.end - c.start)}</div>
+        </div>
+        <div class="history-row-value">${Math.round(c.startSoc)}% → ${Math.round(c.endSoc)}%</div>
+      </div>
+    `).join('');
+  }
+}
+
+// ─── Native wiring ───────────────────────────────────────────────────────────
+
+function initNativeUi() {
+  if (!window.Charger) return;
+
+  document.getElementById('history-btn')?.addEventListener('click', openHistory);
+  document.getElementById('history-close-btn')?.addEventListener('click', closeHistory);
+  document.getElementById('settings-uconnect-btn')?.addEventListener('click', openUconnectSetup);
+  document.getElementById('uconnect-close-btn')?.addEventListener('click', closeUconnectSetup);
+  document.getElementById('uconnect-form')?.addEventListener('submit', saveUconnectCredentials);
+  document.getElementById('uconnect-clear')?.addEventListener('click', clearUconnectCredentials);
+  document.getElementById('settings-folder-btn')?.addEventListener('click', chooseHistoryFolder);
+
+  document.querySelectorAll('#history-range .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      document.querySelectorAll('#history-range .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      historyRangeDays = parseInt(btn.dataset.days, 10);
+      await renderHistory();
+    });
+  });
+
+  if (window.Charger.isNative) {
+    const directBtn = document.getElementById('login-direct-btn');
+    if (directBtn) {
+      directBtn.style.display = '';
+      directBtn.addEventListener('click', openUconnectSetup);
+    }
+  }
+
+  updateHistoryButton();
+  refreshNativeSettings();
+}
+
+if (window.Charger?.ready) {
+  initNativeUi();
+} else {
+  window.addEventListener('charger-native-ready', initNativeUi, { once: true });
 }
 
 checkSession();

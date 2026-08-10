@@ -35,6 +35,8 @@
       <button type="submit">Unlock App</button>
     </form>
     <div id="login-error"></div>
+    <!-- Native builds can skip the Worker entirely by signing in to Uconnect. -->
+    <button class="login-alt" id="login-direct-btn" style="display:none">Connect directly to your vehicle instead</button>
   </div>
 
   <!-- App -->
@@ -43,6 +45,9 @@
       <div class="vehicle-name" id="vehicle-name">Charger</div>
       <div class="topbar-right">
         <span><span class="status-dot" id="status-dot"></span><span id="status-text">connecting</span></span>
+        <button class="icon-btn" id="history-btn" title="Driving history" aria-label="Driving history" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
+        </button>
         <button class="icon-btn" id="settings-btn" title="Entity mapping" aria-label="Entity mapping">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
         </button>
@@ -149,6 +154,32 @@
         <button class="settings-row-btn" id="settings-install-btn">Install</button>
       </div>
 
+      <!-- Native-only: shown when running in the Android app, where the phone
+           talks to Stellantis directly and Cloudflare isn't used at all. -->
+      <div id="native-settings" style="display:none">
+        <h2>Vehicle Account</h2>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Connection</div>
+            <div class="settings-row-value" id="connection-mode-value">--</div>
+          </div>
+          <button class="settings-row-btn" id="settings-uconnect-btn">Set up</button>
+        </div>
+
+        <h2>History Folder</h2>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Synced folder</div>
+            <div class="settings-row-value" id="folder-status-value">Not set</div>
+          </div>
+          <button class="settings-row-btn" id="settings-folder-btn">Choose</button>
+        </div>
+        <div class="settings-hint">
+          Pick a folder inside Google Drive, Dropbox or OneDrive and that app will
+          sync your driving history to your other devices.
+        </div>
+      </div>
+
       <h2>Layout</h2>
       <div class="settings-row">
         <div>
@@ -161,6 +192,60 @@
       <div class="info-actions">
         <button class="action-danger" id="settings-logout-btn">Log out</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Uconnect credential setup (native only) -->
+  <div id="uconnect-screen">
+    <header class="settings-topbar">
+      <button class="icon-btn" id="uconnect-close-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="settings-title">Vehicle Account</div>
+      <div style="width:36px"></div>
+    </header>
+    <div class="settings-body">
+      <div class="settings-hint">
+        These are your Dodge/Uconnect app credentials. They're stored encrypted
+        on this phone using the Android Keystore and sent only to Stellantis.
+      </div>
+      <form id="uconnect-form" class="uconnect-form">
+        <input type="email" id="uconnect-email" placeholder="Uconnect email" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+        <input type="password" id="uconnect-password" placeholder="Uconnect password" autocomplete="current-password" required />
+        <input type="text" id="uconnect-pin" placeholder="4-digit Uconnect PIN" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" />
+        <button type="submit" id="uconnect-save">Verify &amp; Save</button>
+      </form>
+      <div id="uconnect-error"></div>
+      <div class="info-actions">
+        <button class="action-danger" id="uconnect-clear">Remove saved credentials</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Driving history / stats -->
+  <div id="history-screen">
+    <header class="settings-topbar">
+      <button class="icon-btn" id="history-close-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="settings-title">History</div>
+      <div style="width:36px"></div>
+    </header>
+    <div class="settings-body">
+      <div class="toggle-group history-range" id="history-range">
+        <button class="toggle-btn active" data-days="7">7d</button>
+        <button class="toggle-btn" data-days="30">30d</button>
+        <button class="toggle-btn" data-days="90">90d</button>
+        <button class="toggle-btn" data-days="0">All</button>
+      </div>
+
+      <div class="stat-grid" id="history-summary"></div>
+
+      <h2>Trips</h2>
+      <div id="history-trips" class="history-list"></div>
+
+      <h2>Charge Sessions</h2>
+      <div id="history-charges" class="history-list"></div>
     </div>
   </div>
 
@@ -280,6 +365,7 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/gridstack@12/dist/gridstack-all.js"></script>
+  <script type="module" src="/lib/native-bridge.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

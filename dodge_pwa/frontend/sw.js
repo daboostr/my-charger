@@ -1,5 +1,9 @@
-const CACHE = "charger-shell-v9";
-const SHELL_FILES = ["/", "/index.html", "/styles.css", "/app.js", "/manifest.json"];
+const CACHE = "charger-shell-v10";
+const SHELL_FILES = [
+  "/", "/index.html", "/styles.css", "/app.js", "/manifest.json",
+  "/lib/native-bridge.js", "/lib/vehicle-api.js", "/lib/uconnect-client.js",
+  "/lib/transport.js", "/lib/credentials.js", "/lib/history.js", "/lib/recorder.js",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

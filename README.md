@@ -1,10 +1,22 @@
 # Dodge PWA
 
-A Progressive Web App for Dodge/Stellantis Uconnect vehicles — charge status, range, tire pressures, location, remote commands (lock/unlock, climate, charge now, etc.) — running entirely on Cloudflare with no server to maintain.
+A Progressive Web App for Dodge/Stellantis Uconnect vehicles — charge status, range, tire pressures, location, remote commands (lock/unlock, climate, charge now, etc.).
+
+It runs in **two modes** from a single codebase:
 
 ```
-Phone (installed PWA)  →  Cloudflare Pages (frontend)  →  Cloudflare Worker  →  Stellantis API
+Web:     Browser  →  Cloudflare Pages  →  Cloudflare Worker  →  Stellantis API
+Android: Native app (Capacitor)  ────────────────────────────→  Stellantis API
 ```
+
+The Android app needs **no Cloudflare at all**. It talks to Stellantis directly, keeps your
+Uconnect credentials in the Android Keystore, and writes driving history into a folder you pick —
+put that folder inside Google Drive / Dropbox / OneDrive and your history syncs between devices.
+
+> **Why the Worker still exists for the web build:** of the five Stellantis hosts in the auth chain,
+> only `cognito-identity.amazonaws.com` sends CORS headers. The other four send none, so a browser
+> tab can never call them directly no matter where it's hosted. The native app bypasses this because
+> its HTTP requests originate from Java, not the WebView. See `lib/uconnect-client.js`.
 
 ## What you get
 
@@ -91,10 +103,51 @@ In `dodge_pwa/frontend/app.js`, update the `WORKER_URL` constant at the top of t
 
 ### 5. (Optional) Build a native Android app
 
-If you want a real APK/AAB — for sideloading or a Play Store listing — see
-[`android/README.md`](android/README.md). It wraps this same PWA in a Trusted
-Web Activity, so there's no second codebase: frontend changes pushed to `main`
-reach the Android app automatically without a rebuild.
+Two wrappers are available:
+
+- **Capacitor (`android-app/`) — recommended.** A real native app that skips Cloudflare entirely:
+  direct Stellantis calls, Keystore-encrypted credentials, and synced driving history. See below.
+- **Trusted Web Activity (`android/`).** Just Chrome in an app shell around your Pages deployment.
+  Zero maintenance, but it's still a browser, so it's CORS-bound and always needs the Worker. See
+  [`android/README.md`](android/README.md).
+
+## Android app: running without Cloudflare
+
+```bash
+npm install
+npx cap sync android
+npx cap open android      # then Run from Android Studio
+```
+
+Then, in the app:
+
+1. On the login screen tap **"Connect directly to your vehicle instead"** (or Settings → Connection
+   → Set up).
+2. Enter your Uconnect email, password, and PIN. They're verified against Stellantis before being
+   saved, then stored with `EncryptedSharedPreferences` (backed by the Android Keystore) — never in
+   `localStorage`, and never sent anywhere except Stellantis.
+3. Settings → **History Folder → Choose** and pick a folder. Choose one that lives inside Google
+   Drive, Dropbox, or OneDrive and that app handles syncing to your other devices.
+
+Once a folder is set, a **History** button appears in the header with distance, trip count,
+efficiency, energy added, and per-trip/per-charge detail over 7/30/90 days or all time.
+
+### How the synced folder works
+
+History is written as append-only JSONL, one file per device per month:
+
+```
+samples-<deviceId>-2026-08.jsonl
+```
+
+Because no two devices ever write the same file, cloud sync clients never generate
+"conflicted copy" duplicates. Reads union every device's files and de-duplicate by record id, so
+each phone converges on the same complete history.
+
+Stellantis exposes no trip log, so trips and charge sessions are **derived** from odometer and
+state-of-charge samples (`lib/history.js`): moves under 0.3 km are treated as GPS/odometer jitter,
+and a gap of more than 15 minutes starts a new trip. Efficiency is only reported once you've set
+your battery capacity in Settings, since kWh can't be inferred from percentages alone.
 
 ## Updating
 
@@ -109,17 +162,32 @@ Nothing in this repo is tied to any specific person, vehicle, or account — eac
 ## Project structure
 
 ```
-worker.js                      Cloudflare Worker (Stellantis API proxy + auth)
-android/                       Trusted Web Activity wrapper (optional native Android build)
+worker.js                      Cloudflare Worker (Stellantis API proxy — web build only)
+capacitor.config.json          Capacitor config for the native Android app
+android-app/                   Native Android app (direct mode, no Cloudflare)
+  app/src/main/java/dev/charger/app/
+    MainActivity.java          registers the custom plugins
+    SecureStorePlugin.java     Keystore-backed credential storage
+    SyncedFolderPlugin.java    SAF folder picker + append/read for history files
+android/                       Trusted Web Activity wrapper (optional, browser-based)
   twa-manifest.json            Bubblewrap config (run configure.js to fill in your host)
   configure.js                 points the TWA at your Pages deployment
   README.md                    build/signing/asset-link instructions
+tests/history.test.mjs         trip/charge derivation tests (npm test)
 dodge_pwa/frontend/
-  index.html                   app shell, widget templates, Settings overlay
-  app.js                       all UI logic, Worker API calls, widget renderers
+  index.html                   app shell, widget templates, Settings/history overlays
+  app.js                       all UI logic, API calls, widget renderers
   styles.css
   sw.js                        service worker (network-first, same-origin GETs only)
   manifest.json                PWA manifest
+  lib/                         ES modules shared by both modes
+    vehicle-api.js             picks direct vs proxy mode at runtime
+    uconnect-client.js         Stellantis auth chain + AWS SigV4 (ported from worker.js)
+    transport.js               native (CapacitorHttp) vs browser fetch
+    credentials.js             Keystore / localStorage credential + session store
+    history.js                 synced-folder JSONL store, trip & charge derivation
+    recorder.js                turns status snapshots into history samples
+    native-bridge.js           exposes window.Charger to the non-module app.js
   .well-known/assetlinks.json  Digital Asset Links for the Android TWA
   icons/                       app icons (180, 192, 512px)
 ```
@@ -139,6 +207,10 @@ dodge_pwa/frontend/
 **Safari only for PWA install on iOS.** Chrome and other iOS browsers can display the app but can't add it to the home screen. On Android there's no such restriction — Chrome installs it directly.
 
 **Map links are platform-aware.** Tapping the location tile opens Apple Maps on iOS, the default map app via a `geo:` link on Android, and Google Maps on the web.
+
+**History only accrues while the app is running.** Samples are captured on each status poll, so leave the app open on a long drive if you want fine-grained trip data. Nothing is lost between sessions — the odometer is absolute — but a drive taken entirely with the app closed shows up as one large jump and is discarded as jitter-free but unattributable, not as a trip.
+
+**Direct mode is Android-only.** The web build always requires the Worker, because Stellantis sends no CORS headers. If you drop Cloudflare entirely, the Android app is your only client.
 
 **Command tiles reorder on long-press.** On touch devices, press and hold a command tile for a moment before dragging — a short swipe scrolls the command bar instead.
 

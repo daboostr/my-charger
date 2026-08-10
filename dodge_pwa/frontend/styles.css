@@ -1018,3 +1018,150 @@ header.topbar {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ---------- Native-only screens: Uconnect setup + driving history ---------- */
+
+.settings-hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin: -2px 2px 8px;
+}
+
+.login-alt {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  text-decoration: underline;
+  margin-top: 14px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+#uconnect-screen,
+#history-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 110;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+#uconnect-screen.visible,
+#history-screen.visible { display: flex; }
+
+.uconnect-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.uconnect-form input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 16px; /* 16px keeps Android from zooming the field on focus */
+  padding: 13px 14px;
+  width: 100%;
+}
+
+.uconnect-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.uconnect-form button[type="submit"] {
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  color: #000;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 14px;
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.uconnect-form button[type="submit"]:disabled { opacity: 0.6; }
+
+#uconnect-error {
+  color: var(--danger, #ff5f56);
+  font-size: 13px;
+  min-height: 18px;
+  margin-top: 10px;
+}
+
+.action-danger {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--danger, #ff5f56);
+  font-size: 14px;
+  padding: 12px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.history-range { margin-bottom: 4px; }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.history-list { display: flex; flex-direction: column; gap: 6px; }
+
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 11px 14px;
+}
+
+.history-row-main { min-width: 0; }
+.history-row-title { font-size: 15px; font-weight: 600; }
+.history-row-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+.history-row-value {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.history-empty {
+  font-size: 13px;
+  color: var(--text-dim);
+  padding: 14px 2px;
+}
