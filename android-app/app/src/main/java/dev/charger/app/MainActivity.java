@@ -4,9 +4,8 @@ import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
 
 /**
- * Registers the two custom plugins that let the app run without Cloudflare:
- * SecureStore (credentials formerly held as Worker secrets) and SyncedFolder
- * (the user-chosen, cloud-synced history folder).
+ * Registers the custom plugins used by the Android-only app:
+ * SecureStore for credentials and SyncedFolder for cloud-synced history.
  */
 public class MainActivity extends BridgeActivity {
     @Override

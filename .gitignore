@@ -15,12 +15,9 @@ __pycache__/
 **/entities.local.yaml
 **/layout.local.json
 
-# Android / Bubblewrap TWA build output.
-# The signing keystore and its password file must NEVER be committed - losing
-# or leaking them means the Play Store app can't be updated safely.
+# Android build output and signing material.
 *.keystore
 *.jks
-android/android.keystore
 android/app/
 android/build/
 android/gradle/

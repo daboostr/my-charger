@@ -10,8 +10,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 /**
- * Stores the Uconnect credentials that used to live as Cloudflare Worker
- * secrets.
+ * Stores Uconnect credentials in the Android Keystore-backed store.
  *
  * Backed by EncryptedSharedPreferences with an AES256-GCM master key held in
  * the Android Keystore, so the values are encrypted at rest and the key itself

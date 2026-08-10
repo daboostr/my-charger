@@ -1,13 +1,12 @@
 /**
  * Transports for UconnectClient.
  *
- * Native (Android): CapacitorHttp issues requests from the Java layer, so the
+ * Capacitor Android: CapacitorHttp issues requests from the Java layer, so the
  * browser's same-origin policy never applies and Set-Cookie is readable. This
- * is what makes running without Cloudflare possible at all.
+ * is what makes direct Stellantis access possible.
  *
- * Web: Stellantis sends no CORS headers, so a browser tab genuinely cannot
- * reach it. On the web the app keeps using the Cloudflare Worker proxy, which
- * is why proxy mode is retained rather than deleted.
+ * This module is intentionally native-only. The Android build is the sole
+ * supported client and therefore never needs browser transport.
  */
 
 export function isNativeAndroid() {
@@ -57,20 +56,5 @@ export function nativeTransport() {
 
     const data = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
     return makeResponse(res.status, data, cookies);
-  };
-}
-
-/**
- * Worker-proxy transport for the web build.
- *
- * The Worker exposes a small REST surface rather than raw Stellantis URLs, so
- * this transport is only used by the proxy-mode API wrapper, not by
- * UconnectClient's auth chain (which can never run in a browser tab).
- */
-export function fetchTransport() {
-  return async ({ url, method, headers, body }) => {
-    const res = await fetch(url, { method, headers, body });
-    const text = await res.text();
-    return makeResponse(res.status, text, []);
   };
 }

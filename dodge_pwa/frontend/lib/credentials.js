@@ -1,11 +1,9 @@
 /**
  * On-device credential + session storage.
  *
- * Replaces the four Cloudflare Worker secrets. In native mode the Uconnect
- * credentials live in Android EncryptedSharedPreferences (hardware-backed
- * Keystore) via the SecureStore plugin; on the web they fall back to
- * localStorage, which is why the web build keeps using the Worker proxy and
- * never stores Uconnect credentials at all — only the app password.
+ * Uconnect credentials live in Android EncryptedSharedPreferences
+ * (hardware-backed Keystore) via the SecureStore plugin. The localStorage
+ * fallback exists only for isolated JavaScript tests.
  */
 
 const PREFIX = 'dodge_pwa_';

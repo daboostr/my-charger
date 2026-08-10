@@ -101,8 +101,6 @@ const DEFAULT_LAYOUT = {
 };
 
 const LAYOUT_KEY      = 'dodge_pwa_layout_v3'; // bumped: configurable hero-right + new tile layout
-const PASSWORD_KEY    = 'dodge_pwa_password';
-const WORKER_KEY      = 'dodge_pwa_worker_url';
 const VIN_KEY         = 'dodge_pwa_vin';
 const VNAME_KEY       = 'dodge_pwa_vehicle_name';
 const UNITS_KEY       = 'dodge_pwa_units';
@@ -203,82 +201,21 @@ let pollTimer     = null;
 let lastRefresh   = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Worker API helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function getStoredPassword() {
-  return localStorage.getItem(PASSWORD_KEY);
-}
-
-function getWorkerUrl() {
-  return (localStorage.getItem(WORKER_KEY) || '').replace(/\/$/, '');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Backend mode
-// ─────────────────────────────────────────────────────────────────────────────
-// "direct" = Android app talking to Stellantis itself (no Cloudflare).
-// "proxy"  = browser talking to the Cloudflare Worker, which is mandatory on
-// the web because Stellantis serves no CORS headers.
-
-async function isDirectMode() {
-  if (!window.Charger) return false;
-  try {
-    return (await window.Charger.getMode()) === 'direct';
-  } catch {
-    return false;
-  }
-}
-
-async function workerFetch(method, path, body = null) {
-  const password = getStoredPassword();
-  const opts = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-App-Password': password || '',
-    },
-  };
-  if (body !== null) opts.body = JSON.stringify(body);
-  return fetch(getWorkerUrl() + path, opts);
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function checkSession() {
-  // Native direct mode needs no Worker and no app password — the Uconnect
-  // credentials on the device are the only thing standing between the user and
-  // their vehicle, and they're held in the Android Keystore.
-  if (await isDirectMode()) { await showApp(); return; }
-
-  const password  = getStoredPassword();
-  const workerUrl = getWorkerUrl();
-  if (!password || !workerUrl) { showLogin(); return; }
-  try {
-    const res = await fetch(workerUrl + '/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    if (res.ok) {
-      await showApp();
-    } else {
-      localStorage.removeItem(PASSWORD_KEY);
-      showLogin();
-    }
-  } catch {
-    // Network error — show login so user can retry
-    showLogin();
+  if (!window.Charger?.isNative) {
+    showLogin('This app must be run as the Android app.');
+    return;
   }
+  if (await window.Charger.credentials.isConfigured()) await showApp();
+  else showLogin();
 }
 
-function showLogin() {
-  // Pre-fill the Worker URL field if we already have one stored
-  const stored = localStorage.getItem(WORKER_KEY) || '';
-  const urlInput = document.getElementById('worker-url-input');
-  if (urlInput && stored) urlInput.value = stored;
+function showLogin(message = '') {
+  document.getElementById('login-error').textContent = message;
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').classList.remove('visible');
 }
@@ -289,31 +226,8 @@ async function showApp() {
   await initApp();
 }
 
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const workerUrl = document.getElementById('worker-url-input').value.trim().replace(/\/$/, '');
-  const password  = document.getElementById('password-input').value;
-  const errorEl   = document.getElementById('login-error');
-  errorEl.textContent = '';
-  if (!workerUrl) { errorEl.textContent = 'Enter your Worker URL'; return; }
-  try {
-    const res = await fetch(workerUrl + '/auth', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ password }),
-    });
-    if (!res.ok) throw new Error('bad password');
-    localStorage.setItem(WORKER_KEY, workerUrl);
-    localStorage.setItem(PASSWORD_KEY, password);
-    await showApp();
-  } catch {
-    errorEl.textContent = 'Wrong URL or password';
-  }
-});
-
 function doLogout() {
   stopPolling();
-  localStorage.removeItem(PASSWORD_KEY);
   localStorage.removeItem(VIN_KEY);
   localStorage.removeItem(VNAME_KEY);
   closeInfo();
@@ -333,13 +247,7 @@ async function initApp() {
 
   if (!currentVin) {
     try {
-      let vehicles = null;
-      if (await isDirectMode()) {
-        vehicles = await window.Charger.vehicleApi.listVehicles();
-      } else {
-        const res = await workerFetch('GET', '/vehicles');
-        if (res.ok) vehicles = await res.json();
-      }
+      const vehicles = await window.Charger.vehicleApi.listVehicles();
       if (vehicles && vehicles.length > 0) {
         currentVin  = vehicles[0].vin;
         vehicleName = vehicles[0].nickname || vehicles[0].modelDescription || 'Dodge';
@@ -373,20 +281,7 @@ async function fetchAndRender() {
   try {
     let data;
 
-    if (await isDirectMode()) {
-      data = await window.Charger.vehicleApi.getStatus(currentVin);
-    } else {
-      const res = await workerFetch('GET', `/vehicles/${currentVin}/status`);
-      if (res.status === 401) {
-        // Password no longer valid — kick back to login
-        stopPolling();
-        localStorage.removeItem(PASSWORD_KEY);
-        showLogin();
-        return;
-      }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      data = await res.json();
-    }
+    data = await window.Charger.vehicleApi.getStatus(currentVin);
 
     const snapshot = buildSnapshot(data);
     render(snapshot);
@@ -409,7 +304,7 @@ function setStatus(live) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Snapshot builder — maps Worker /vehicles/:vin/status → UI snapshot format
+// Snapshot builder — maps the Stellantis status payload to the UI snapshot format
 // ─────────────────────────────────────────────────────────────────────────────
 
 function _sg(d, ...keys) {
@@ -1115,12 +1010,7 @@ function renderSelectCycle(root, w, s) {
 
 async function setChargeSpeed(option) {
   try {
-    if (await isDirectMode()) {
-      await window.Charger.vehicleApi.setChargePreference(currentVin, option);
-    } else {
-      const res = await workerFetch('POST', `/vehicles/${currentVin}/charge-preference`, { level: option });
-      if (!res.ok) throw new Error();
-    }
+    await window.Charger.vehicleApi.setChargePreference(currentVin, option);
     showToast(`Charge speed: ${prettyChargeLevel(option)}`);
     fetchAndRender();
   } catch {
@@ -1199,12 +1089,7 @@ async function runCommand(name, btn) {
   }
   btn.classList.add('pending');
   try {
-    if (await isDirectMode()) {
-      await window.Charger.vehicleApi.sendCommand(currentVin, uconnectCmd);
-    } else {
-      const res = await workerFetch('POST', `/vehicles/${currentVin}/command`, { command: uconnectCmd });
-      if (!res.ok) throw new Error();
-    }
+    await window.Charger.vehicleApi.sendCommand(currentVin, uconnectCmd);
     showToast(`${COMMAND_LABELS[name] || name} sent`);
   } catch {
     showToast(`Failed to send ${COMMAND_LABELS[name] || name}`);
@@ -1437,60 +1322,19 @@ document.getElementById('settings-save-name').addEventListener('click', () => {
   showToast('Vehicle name saved');
 });
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Android / Chrome install prompt
-// ─────────────────────────────────────────────────────────────────────────────
-// Chrome fires beforeinstallprompt instead of offering an automatic banner, so
-// the event has to be captured and replayed from a user gesture. iOS Safari
-// never fires it, in which case the Settings row simply stays hidden.
-
-let deferredInstallPrompt = null;
-const installRow = document.getElementById('install-row');
-const installBtn = document.getElementById('settings-install-btn');
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  if (installRow) installRow.style.display = '';
-});
-
-window.addEventListener('appinstalled', () => {
-  deferredInstallPrompt = null;
-  if (installRow) installRow.style.display = 'none';
-  showToast('Charger installed');
-});
-
-if (installBtn) {
-  installBtn.addEventListener('click', async () => {
-    if (!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    const { outcome } = await deferredInstallPrompt.userChoice;
-    deferredInstallPrompt = null;
-    if (outcome !== 'accepted' && installRow) installRow.style.display = 'none';
-  });
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Native mode: credentials, synced folder, driving history
 // ─────────────────────────────────────────────────────────────────────────────
-// Everything below no-ops on the web build, where window.Charger reports the
-// native pieces as unavailable and the app keeps using the Cloudflare Worker.
 
 async function refreshNativeSettings() {
   const wrap = document.getElementById('native-settings');
   if (!wrap || !window.Charger) return;
 
-  if (!window.Charger.isNative) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
 
   const configured = await window.Charger.credentials.isConfigured();
-  document.getElementById('connection-mode-value').textContent = configured
-    ? 'Direct to vehicle (no Cloudflare)'
-    : 'Using Cloudflare Worker';
+  document.getElementById('connection-mode-value').textContent =
+    configured ? 'Connected directly to Stellantis' : 'Not connected';
   document.getElementById('settings-uconnect-btn').textContent = configured ? 'Change' : 'Set up';
 
   const folder = await window.Charger.historyStore.folderName();
@@ -1690,16 +1534,11 @@ function initNativeUi() {
     });
   });
 
-  if (window.Charger.isNative) {
-    const directBtn = document.getElementById('login-direct-btn');
-    if (directBtn) {
-      directBtn.style.display = '';
-      directBtn.addEventListener('click', openUconnectSetup);
-    }
-  }
+  document.getElementById('login-direct-btn')?.addEventListener('click', openUconnectSetup);
 
   updateHistoryButton();
   refreshNativeSettings();
+  checkSession();
 }
 
 if (window.Charger?.ready) {
@@ -1707,5 +1546,3 @@ if (window.Charger?.ready) {
 } else {
   window.addEventListener('charger-native-ready', initNativeUi, { once: true });
 }
-
-checkSession();

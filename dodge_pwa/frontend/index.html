@@ -5,19 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Charger</title>
 
-  <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#0A0C0F" />
   <meta name="color-scheme" content="dark" />
 
-  <!-- Android / Chrome standalone -->
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="application-name" content="Charger" />
-
-  <!-- iOS standalone (kept for parity) -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Charger" />
-  <link rel="apple-touch-icon" href="/icons/icon-180.png" />
   <link rel="icon" href="/icons/icon-192.png" />
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@12/dist/gridstack.min.css" />
@@ -29,14 +19,9 @@
   <div id="login-screen">
     <h1>Charger</h1>
     <div class="subtitle">Connected to your vehicle</div>
-    <form id="login-form">
-      <input type="url" id="worker-url-input" placeholder="https://your-worker.your-account.workers.dev" autocomplete="url" autocapitalize="none" spellcheck="false" required />
-      <input type="password" id="password-input" placeholder="Password" autocomplete="current-password" required />
-      <button type="submit">Unlock App</button>
-    </form>
+    <p class="login-description">Sign in directly to your Dodge/Uconnect account. Your credentials stay encrypted on this phone.</p>
+    <button id="login-direct-btn">Connect to your vehicle</button>
     <div id="login-error"></div>
-    <!-- Native builds can skip the Worker entirely by signing in to Uconnect. -->
-    <button class="login-alt" id="login-direct-btn" style="display:none">Connect directly to your vehicle instead</button>
   </div>
 
   <!-- App -->
@@ -97,7 +82,7 @@
       </div>
       <div class="info-row">
         <div class="info-label">Data source</div>
-        <div class="info-value info-value-small">Cloudflare Worker → Stellantis</div>
+        <div class="info-value info-value-small">Direct Android connection → Stellantis</div>
       </div>
 
       <h2>Vehicle</h2>
@@ -145,18 +130,7 @@
         <div id="hero-right-settings" class="hero-right-settings"></div>
       </div>
 
-      <h2>App</h2>
-      <div class="settings-row" id="install-row" style="display:none">
-        <div>
-          <div class="settings-row-label">Install app</div>
-          <div class="settings-row-value">Add Charger to your home screen</div>
-        </div>
-        <button class="settings-row-btn" id="settings-install-btn">Install</button>
-      </div>
-
-      <!-- Native-only: shown when running in the Android app, where the phone
-           talks to Stellantis directly and Cloudflare isn't used at all. -->
-      <div id="native-settings" style="display:none">
+      <div id="native-settings">
         <h2>Vehicle Account</h2>
         <div class="settings-row">
           <div>

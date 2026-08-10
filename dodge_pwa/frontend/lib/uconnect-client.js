@@ -1,28 +1,13 @@
 /**
  * Uconnect client — the full Stellantis auth chain and vehicle API, extracted
- * from worker.js so the exact same code can run in more than one place:
+ * from the original server implementation. It runs in the Capacitor Android app
+ * using a native HTTP transport, which is not subject to CORS and can read
+ * Set-Cookie headers.
  *
- *   1. On the phone (Capacitor Android) using a native HTTP transport, which
- *      is not subject to CORS and can read Set-Cookie headers.
- *   2. Inside the Cloudflare Worker (legacy/optional proxy mode).
+ * Native HTTP is used rather than browser fetch because the Stellantis auth
+ * endpoints do not provide the CORS headers required by a WebView.
  *
- * ── Why a plain browser cannot talk to Stellantis directly ──────────────────
- * Measured against the live endpoints, only Cognito sends an
- * Access-Control-Allow-Origin header:
- *
- *   login-us.dodge.com             → no ACAO   (blocked in browsers)
- *   authz.sdpr-02.fcagcv.com       → no ACAO   (blocked in browsers)
- *   channels.sdpr-02.fcagcv.com    → no ACAO   (blocked in browsers)
- *   mfa.fcl-02.fcagcv.com          → no ACAO   (blocked in browsers)
- *   cognito-identity.amazonaws.com → ACAO: *   (allowed)
- *
- * So "run everything in the phone's browser tab" is not possible; the CORS wall
- * is the real reason the Worker exists, not merely secret storage. A native
- * HTTP transport removes that wall, which is what the Android app supplies.
- * That is why the transport is injected here rather than calling global fetch.
- *
- * The module is dependency-free and uses only Web Crypto, so it loads as an ES
- * module in the app and as an import in the Worker.
+ * The module is dependency-free and uses only Web Crypto.
  */
 
 export const BRAND = {
