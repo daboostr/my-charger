@@ -31,17 +31,29 @@ html, body {
   -webkit-font-smoothing: antialiased;
   height: 100%;
   overscroll-behavior-y: none;
+  /* Chrome/Android: stop the grey flash on every tap and the long-press
+     text-selection/callout that fires while dragging tiles. */
+  -webkit-tap-highlight-color: transparent;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
+  /* dvh tracks Android Chrome's collapsing URL bar; vh is the fallback for
+     browsers without dynamic viewport units. */
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
 
-button { font-family: inherit; }
+button {
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
 
 /* ---------- Login screen ---------- */
 
@@ -184,6 +196,10 @@ header.topbar {
   inset: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Android Chrome: keep flings inside this pane so they never trigger
+     pull-to-refresh or the browser's overscroll glow. */
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   padding-top: calc(var(--header-h) + env(safe-area-inset-top) + 10px);
   padding-bottom: calc(var(--footer-h) + env(safe-area-inset-bottom) + 12px);
   transition: padding-top 0.15s ease;
@@ -209,6 +225,7 @@ header.topbar {
   box-sizing: border-box;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
   background: rgba(10, 12, 15, 0.72);
   backdrop-filter: blur(20px) saturate(1.4);
@@ -233,7 +250,16 @@ header.topbar {
   flex: 0 0 auto;
   width: 64px;
   height: 100%;
+  /* Long-press reorder is handled in JS; block Android's native long-press
+     selection/context menu so the drag isn't interrupted. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
+
+/* Only suppress browser panning once a drag is actually in progress, so the
+   command bar still scrolls horizontally with a normal swipe. */
+.cmd-tile-wrap.cmd-dragging { touch-action: none; }
 
 .cmd-tile-wrap.widget-hidden { opacity: 0.35; }
 
@@ -831,7 +857,7 @@ header.topbar {
   letter-spacing: 0.03em;
 }
 
-.settings-body { flex: 1; overflow-y: auto; padding: 8px 20px 24px; }
+.settings-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 8px 20px 24px; }
 
 .settings-body h2 {
   font-size: 12px;

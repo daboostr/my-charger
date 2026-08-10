@@ -1,4 +1,4 @@
-const CACHE = "charger-shell-v8";
+const CACHE = "charger-shell-v9";
 const SHELL_FILES = ["/", "/index.html", "/styles.css", "/app.js", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -30,14 +30,24 @@ self.addEventListener("activate", (event) => {
 // if offline. The Worker lives on a different origin so the service worker
 // never intercepts those requests — only the Pages static files are handled here.
 self.addEventListener("fetch", (event) => {
+  const req = event.request;
+
+  // Only same-origin GETs belong in the shell cache. Chrome on Android routes
+  // POSTs (commands), non-http schemes (geo:, chrome-extension:) and the
+  // cross-origin Worker/CDN requests through here too, and cache.put() throws
+  // on any of them — which surfaces as an unhandled rejection and, for POSTs,
+  // a broken command.
+  if (req.method !== "GET" || !req.url.startsWith(self.location.origin)) return;
+
   event.respondWith(
-    fetch(event.request)
+    fetch(req)
       .then((resp) => {
-        if (resp.ok) {
-          caches.open(CACHE).then((cache) => cache.put(event.request, resp.clone()));
+        if (resp.ok && resp.type === "basic") {
+          const copy = resp.clone();
+          caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
         }
         return resp;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => caches.match(req).then((hit) => hit || caches.match("/index.html")))
   );
 });

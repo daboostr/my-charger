@@ -2,11 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Charger</title>
 
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#0A0C0F" />
+  <meta name="color-scheme" content="dark" />
+
+  <!-- Android / Chrome standalone -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Charger" />
+
+  <!-- iOS standalone (kept for parity) -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Charger" />
@@ -131,6 +138,15 @@
       <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px">
         <div class="settings-row-label">Right column (select up to 5)</div>
         <div id="hero-right-settings" class="hero-right-settings"></div>
+      </div>
+
+      <h2>App</h2>
+      <div class="settings-row" id="install-row" style="display:none">
+        <div>
+          <div class="settings-row-label">Install app</div>
+          <div class="settings-row-value">Add Charger to your home screen</div>
+        </div>
+        <button class="settings-row-btn" id="settings-install-btn">Install</button>
       </div>
 
       <h2>Layout</h2>

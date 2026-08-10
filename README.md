@@ -11,7 +11,7 @@ Phone (installed PWA)  →  Cloudflare Pages (frontend)  →  Cloudflare Worker 
 - A dashboard of widgets (battery gauge, range, 12V battery, tire pressures, charging status, location, and more) that you can **drag, resize, and show/hide** directly from the app
 - Remote commands (lock/unlock, climate on/off, charge now, locate, deep refresh, etc.) as tappable buttons
 - A **Settings screen** for unit preferences (miles/km, psi/kPa), vehicle nickname, and layout reset
-- Installs to your iPhone home screen like a real app (standalone, full screen, its own icon)
+- Installs to your **Android or iPhone** home screen like a real app (standalone, full screen, its own icon), with an optional native Android package for Play Store distribution
 
 ## Architecture
 
@@ -75,10 +75,26 @@ In `dodge_pwa/frontend/app.js`, update the `WORKER_URL` constant at the top of t
 
 ### 4. Install on your phone
 
-1. Open the Pages URL in **Safari** (iOS requires Safari for PWA install — Chrome/other browsers can't do it)
+**Android (Chrome):**
+
+1. Open the Pages URL in Chrome
 2. Enter the app password you set as `APP_PASSWORD` in the Worker
-3. Tap **Share → Add to Home Screen**
+3. Tap **⋮ → Install app** (or use the **Install** button under Settings → App)
 4. Launch from your home screen icon — full screen, no browser chrome
+
+**iOS (Safari):**
+
+1. Open the Pages URL in **Safari** (iOS requires Safari for PWA install — Chrome/other browsers can't do it)
+2. Enter the app password
+3. Tap **Share → Add to Home Screen**
+4. Launch from your home screen icon
+
+### 5. (Optional) Build a native Android app
+
+If you want a real APK/AAB — for sideloading or a Play Store listing — see
+[`android/README.md`](android/README.md). It wraps this same PWA in a Trusted
+Web Activity, so there's no second codebase: frontend changes pushed to `main`
+reach the Android app automatically without a rebuild.
 
 ## Updating
 
@@ -94,12 +110,17 @@ Nothing in this repo is tied to any specific person, vehicle, or account — eac
 
 ```
 worker.js                      Cloudflare Worker (Stellantis API proxy + auth)
+android/                       Trusted Web Activity wrapper (optional native Android build)
+  twa-manifest.json            Bubblewrap config (run configure.js to fill in your host)
+  configure.js                 points the TWA at your Pages deployment
+  README.md                    build/signing/asset-link instructions
 dodge_pwa/frontend/
   index.html                   app shell, widget templates, Settings overlay
   app.js                       all UI logic, Worker API calls, widget renderers
   styles.css
-  sw.js                        service worker (network-first, cache v6)
+  sw.js                        service worker (network-first, same-origin GETs only)
   manifest.json                PWA manifest
+  .well-known/assetlinks.json  Digital Asset Links for the Android TWA
   icons/                       app icons (180, 192, 512px)
 ```
 
@@ -115,7 +136,11 @@ dodge_pwa/frontend/
 
 **The climate switch state may be unreliable.** On some vehicles the switch always reports `unknown`. The ignition sensor tends to reflect actual climate status better.
 
-**Safari only for PWA install on iOS.** Chrome and other iOS browsers can display the app but can't add it to the home screen.
+**Safari only for PWA install on iOS.** Chrome and other iOS browsers can display the app but can't add it to the home screen. On Android there's no such restriction — Chrome installs it directly.
+
+**Map links are platform-aware.** Tapping the location tile opens Apple Maps on iOS, the default map app via a `geo:` link on Android, and Google Maps on the web.
+
+**Command tiles reorder on long-press.** On touch devices, press and hold a command tile for a moment before dragging — a short swipe scrolls the command bar instead.
 
 ## License
 

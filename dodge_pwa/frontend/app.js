@@ -687,25 +687,63 @@ function enableCmdTileDrag(wrap, bar) {
   });
 
   // ── Touch drag ────────────────────────────────────────────────────────────
-  let touchSrc = null, touchClone = null, touchScrollLeft = 0;
+  // On Android the command bar is horizontally scrollable, so a drag must not
+  // start on plain touchstart or every swipe would be swallowed. Instead the
+  // drag arms on a long press (and cancels if the finger moves first), which
+  // matches the platform convention for touch reordering.
+  const LONG_PRESS_MS = 250;
+  const MOVE_CANCEL_PX = 10;
 
-  wrap.addEventListener('touchstart', e => {
+  let touchSrc = null, touchClone = null;
+  let pressTimer = null, startX = 0, startY = 0, dragArmed = false;
+
+  function clearPressTimer() {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+  }
+
+  function beginTouchDrag() {
+    dragArmed = true;
     touchSrc = wrap;
-    touchScrollLeft = bar.scrollLeft;
     wrap.classList.add('cmd-dragging');
-    // Ghost clone
     touchClone = wrap.cloneNode(true);
     touchClone.style.cssText = `position:fixed;pointer-events:none;opacity:0.7;z-index:200;width:${wrap.offsetWidth}px;height:${wrap.offsetHeight}px;`;
     document.body.appendChild(touchClone);
     const r = wrap.getBoundingClientRect();
     touchClone.style.left = r.left + 'px';
     touchClone.style.top  = r.top  + 'px';
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
+
+  function endTouchDrag() {
+    clearPressTimer();
+    if (touchClone) { touchClone.remove(); touchClone = null; }
+    wrap.classList.remove('cmd-dragging');
+    bar.querySelectorAll('.cmd-tile-wrap').forEach(w => w.classList.remove('cmd-drag-over'));
+    touchSrc = null;
+    dragArmed = false;
+  }
+
+  wrap.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    dragArmed = false;
+    clearPressTimer();
+    pressTimer = setTimeout(beginTouchDrag, LONG_PRESS_MS);
   }, { passive: true });
 
   wrap.addEventListener('touchmove', e => {
-    if (!touchSrc || !touchClone) return;
-    e.preventDefault();
     const t = e.touches[0];
+    if (!dragArmed) {
+      // Finger moved before the long press completed — treat it as a scroll.
+      if (Math.abs(t.clientX - startX) > MOVE_CANCEL_PX ||
+          Math.abs(t.clientY - startY) > MOVE_CANCEL_PX) {
+        clearPressTimer();
+      }
+      return;
+    }
+    if (!touchSrc || !touchClone) return;
+    if (e.cancelable) e.preventDefault();
     touchClone.style.left = (t.clientX - wrap.offsetWidth  / 2) + 'px';
     touchClone.style.top  = (t.clientY - wrap.offsetHeight / 2) + 'px';
     // Highlight drop target
@@ -718,24 +756,27 @@ function enableCmdTileDrag(wrap, bar) {
   }, { passive: false });
 
   wrap.addEventListener('touchend', e => {
-    if (!touchSrc || !touchClone) return;
+    if (!dragArmed || !touchSrc || !touchClone) { endTouchDrag(); return; }
     const t = e.changedTouches[0];
-    if (touchClone) { touchClone.remove(); touchClone = null; }
-    wrap.classList.remove('cmd-dragging');
-    bar.querySelectorAll('.cmd-tile-wrap').forEach(w => w.classList.remove('cmd-drag-over'));
+    // Suppress the click that would otherwise fire the command after a drag.
+    if (e.cancelable) e.preventDefault();
 
-    // Find drop target
+    touchClone.style.display = 'none';
     const el = document.elementFromPoint(t.clientX, t.clientY);
     const target = el?.closest('.cmd-tile-wrap');
-    if (target && target !== touchSrc) {
+    const src = touchSrc;
+    endTouchDrag();
+
+    if (target && target !== src) {
       const wraps  = [...bar.querySelectorAll('.cmd-tile-wrap')];
-      const srcIdx = wraps.indexOf(touchSrc);
+      const srcIdx = wraps.indexOf(src);
       const dstIdx = wraps.indexOf(target);
-      bar.insertBefore(touchSrc, srcIdx < dstIdx ? target.nextSibling : target);
+      bar.insertBefore(src, srcIdx < dstIdx ? target.nextSibling : target);
       syncCommandBarOrder();
     }
-    touchSrc = null;
-  });
+  }, { passive: false });
+
+  wrap.addEventListener('touchcancel', endTouchDrag);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1046,13 +1087,24 @@ async function setChargeSpeed(option) {
   }
 }
 
+// Apple Maps only exists on Apple platforms; Android needs a geo: URI (which
+// opens the user's default map app) and everything else falls back to the
+// Google Maps web URL, which works in any browser.
+function mapsUrl(lat, lon) {
+  const ua = navigator.userAgent || '';
+  const isApple = /iPad|iPhone|iPod|Macintosh/.test(ua);
+  if (isApple) return `https://maps.apple.com/?ll=${lat},${lon}`;
+  if (/Android/.test(ua)) return `geo:${lat},${lon}?q=${lat},${lon}`;
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+}
+
 function renderLocation(root, s) {
   const loc  = s.location;
   const link = root.querySelector('[data-role="link"]');
   const lat  = loc?.attributes?.latitude;
   const lon  = loc?.attributes?.longitude;
   if (lat != null && lon != null) {
-    link.href = `https://maps.apple.com/?ll=${lat},${lon}`;
+    link.href = mapsUrl(lat, lon);
     root.querySelector('[data-role="updated"]').textContent = '';
   } else {
     link.removeAttribute('href');
@@ -1340,6 +1392,39 @@ document.getElementById('settings-save-name').addEventListener('click', () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Android / Chrome install prompt
+// ─────────────────────────────────────────────────────────────────────────────
+// Chrome fires beforeinstallprompt instead of offering an automatic banner, so
+// the event has to be captured and replayed from a user gesture. iOS Safari
+// never fires it, in which case the Settings row simply stays hidden.
+
+let deferredInstallPrompt = null;
+const installRow = document.getElementById('install-row');
+const installBtn = document.getElementById('settings-install-btn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (installRow) installRow.style.display = '';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  if (installRow) installRow.style.display = 'none';
+  showToast('Charger installed');
+});
+
+if (installBtn) {
+  installBtn.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    if (outcome !== 'accepted' && installRow) installRow.style.display = 'none';
+  });
 }
 
 checkSession();
