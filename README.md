@@ -37,6 +37,18 @@ for visibility against the dark Android theme.
 The dashboard shows battery state, range, charge status, tire pressure, odometer, location, and
 remote vehicle commands.
 
+### Settings
+
+![My Charger settings](docs/screenshots/settings.png)
+
+Settings includes vehicle naming, battery capacity, units, account connection, synced history folder,
+startup sound, and dashboard layout controls.
+
+![My Charger storage and sync settings](docs/screenshots/settings-native.png)
+
+The lower Settings section shows the direct Stellantis connection, the synced history folder for
+Google Drive/Dropbox/OneDrive, the startup-sound toggle, and layout reset controls.
+
 ### Driving history
 
 ![My Charger driving history](docs/screenshots/history.png)
