@@ -41,7 +41,15 @@ The custom plugins are in `android-app/app/src/main/java/dev/charger/app/`:
   and reads/appends history files.
 
 If `npx cap add android` creates a generated `android/` project, copy the custom Java plugin files
-into the generated app module before syncing. The generated project is intentionally not committed.
+into the generated app module before syncing. Add these dependencies to
+`android/app/build.gradle`:
+
+```groovy
+implementation "androidx.documentfile:documentfile:1.0.1"
+implementation "androidx.security:security-crypto:1.1.0-alpha06"
+```
+
+The generated project is intentionally not committed.
 
 ## First launch
 
