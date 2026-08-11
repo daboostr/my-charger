@@ -25,6 +25,13 @@ manager used to open it.
 
 ## Screenshots
 
+### Connect screen
+
+![My Charger connect screen](docs/screenshots/setup-device.png)
+
+The first screen introduces My Charger and provides the entry point for connecting a Uconnect
+vehicle.
+
 ### Initial setup
 
 ![My Charger credential setup](docs/screenshots/credentials.png)
