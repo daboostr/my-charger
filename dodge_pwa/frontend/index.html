@@ -237,6 +237,41 @@
     </div>
   </div>
 
+  <!-- Current battery detail -->
+  <div id="battery-screen">
+    <header class="settings-topbar">
+      <button class="icon-btn" id="battery-close-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="settings-title">Battery</div>
+      <div style="width:36px"></div>
+    </header>
+    <div class="settings-body battery-detail-body">
+      <div class="battery-detail-state" id="battery-detail-state">Idle</div>
+      <div class="battery-detail-soc"><span id="battery-detail-soc">--</span><span>% SOC</span></div>
+      <div class="stat-grid battery-detail-grid">
+        <div class="stat-card">
+          <div class="stat-label">Since last charge</div>
+          <div class="stat-value" id="battery-detail-distance">--</div>
+          <div class="stat-unit">mi driven</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Energy used</div>
+          <div class="stat-value" id="battery-detail-kwh">--</div>
+          <div class="stat-unit">kWh</div>
+        </div>
+        <div class="stat-card battery-detail-efficiency-card">
+          <div class="stat-label">Actual efficiency</div>
+          <div class="stat-value" id="battery-detail-efficiency">--</div>
+          <div class="stat-unit">mi/kWh</div>
+        </div>
+      </div>
+      <div class="settings-hint" id="battery-detail-hint">
+        Driving totals are calculated from the samples recorded after the most recent charge session.
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <!-- Widget content templates (cloned by app.js, never shown directly) -->

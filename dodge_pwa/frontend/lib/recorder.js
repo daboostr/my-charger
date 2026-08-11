@@ -10,7 +10,13 @@
  * break the dashboard, so every entry point swallows its errors after logging.
  */
 
-import { historyStore, deriveTrips, deriveChargeSessions, summarize } from './history.js';
+import {
+  historyStore,
+  deriveTrips,
+  deriveChargeSessions,
+  summarize,
+  summarizeSinceLastCharge,
+} from './history.js';
 
 /** Pulls a flat sample out of the nested Stellantis status payload. */
 export function sampleFromSnapshot(snapshot, vin) {
@@ -81,5 +87,6 @@ export async function loadHistory({ sinceMs, batteryKwh } = {}) {
     trips,
     sessions,
     summary: summarize(trips, sessions, batteryKwh),
+    sinceLastCharge: summarizeSinceLastCharge(samples, batteryKwh),
   };
 }

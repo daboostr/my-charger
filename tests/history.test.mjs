@@ -4,7 +4,12 @@
  */
 
 import assert from 'node:assert/strict';
-import { deriveTrips, deriveChargeSessions, summarize } from '../dodge_pwa/frontend/lib/history.js';
+import {
+  deriveTrips,
+  deriveChargeSessions,
+  summarize,
+  summarizeSinceLastCharge,
+} from '../dodge_pwa/frontend/lib/history.js';
 
 const MIN = 60 * 1000;
 const t = Date.UTC(2026, 7, 1, 8, 0, 0);
@@ -101,6 +106,21 @@ const at = m => t + m * MIN;
   const s = summarize([{ distanceKm: 10, startSoc: 50, endSoc: 40 }], [], null);
   assert.equal(s.kwhUsed, null);
   assert.equal(s.efficiencyKmPerKwh, null);
+}
+
+// ── Since last charge ────────────────────────────────────────────────────────
+{
+  const samples = [
+    { t: at(0),  odo: 100, soc: 40, charging: false, vin: 'V' },
+    { t: at(5),  odo: 100, soc: 80, charging: true,  vin: 'V' },
+    { t: at(10), odo: 100, soc: 80, charging: false, vin: 'V' },
+    { t: at(15), odo: 106, soc: 77, charging: false, vin: 'V' },
+    { t: at(20), odo: 112, soc: 74, charging: false, vin: 'V' },
+  ];
+  const detail = summarizeSinceLastCharge(samples, 60);
+  assert.equal(detail.distanceKm, 12);
+  assert.ok(Math.abs(detail.kwhUsed - 3.6) < 1e-9);
+  assert.ok(Math.abs(detail.efficiencyKmPerKwh - 12 / 3.6) < 1e-9);
 }
 
 console.log('All history tests passed');

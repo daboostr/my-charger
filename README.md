@@ -46,6 +46,13 @@ password, and PIN before verification.
 The dashboard shows battery state, range, charge status, tire pressure, odometer, location, and
 remote vehicle commands.
 
+### Battery details
+
+![My Charger battery details](docs/screenshots/battery.png)
+
+Tap the battery gauge to see the current Charging/Idle state, SOC, miles driven since the last
+charge, energy used, and actual efficiency in mi/kWh.
+
 ### Settings
 
 ![My Charger settings](docs/screenshots/settings.png)

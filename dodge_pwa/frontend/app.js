@@ -822,7 +822,60 @@ function applySnapshotToDom(snapshot) {
   });
 }
 
+function closeBatteryDetail() {
+  document.getElementById('battery-screen').classList.remove('visible');
+}
+
+function renderBatteryDetail(data) {
+  const sensors = lastSnapshot?.sensors || {};
+  const soc = num(sensors.state_of_charge);
+  const charging = sensors.charging_status?.state === 'on';
+  document.getElementById('battery-detail-state').textContent = charging ? 'Charging' : 'Idle';
+  document.getElementById('battery-detail-soc').textContent = soc == null ? '--' : Math.round(soc);
+
+  const detail = data?.sinceLastCharge;
+  const miles = detail?.distanceKm != null ? detail.distanceKm * 0.621371 : null;
+  document.getElementById('battery-detail-distance').textContent =
+    miles == null ? '--' : miles.toFixed(1);
+  document.getElementById('battery-detail-kwh').textContent =
+    detail?.kwhUsed == null ? '--' : detail.kwhUsed.toFixed(1);
+  const efficiency = detail?.efficiencyKmPerKwh;
+  document.getElementById('battery-detail-efficiency').textContent =
+    efficiency == null ? '--' : (efficiency * 0.621371).toFixed(1);
+}
+
+async function openBatteryDetail() {
+  document.getElementById('battery-screen').classList.add('visible');
+  renderBatteryDetail(null);
+  if (!window.Charger?.loadHistory) return;
+
+  try {
+    const batteryKwh = parseFloat(localStorage.getItem(BATTERY_KEY)) || null;
+    const data = await window.Charger.loadHistory({ batteryKwh });
+    renderBatteryDetail(data);
+  } catch (err) {
+    document.getElementById('battery-detail-hint').textContent =
+      `Driving totals unavailable: ${err.message}`;
+  }
+}
+
 function renderHero(root, s) {
+  const batteryTrigger = root.querySelector('.hero-left');
+  if (batteryTrigger && !batteryTrigger.dataset.detailBound) {
+    batteryTrigger.dataset.detailBound = '1';
+    batteryTrigger.classList.add('battery-detail-trigger');
+    batteryTrigger.setAttribute('role', 'button');
+    batteryTrigger.setAttribute('tabindex', '0');
+    batteryTrigger.setAttribute('aria-label', 'Open battery details');
+    batteryTrigger.addEventListener('click', openBatteryDetail);
+    batteryTrigger.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openBatteryDetail();
+      }
+    });
+  }
+
   const soc = num(s.state_of_charge);
 
   // SoC percentage above battery
@@ -843,6 +896,7 @@ function renderHero(root, s) {
     } else {
       kwhEl.style.display = 'none';
     }
+
   }
 
   // Charge port + charging status — fill both portrait and landscape elements
@@ -1533,6 +1587,7 @@ function initNativeUi() {
 
   document.getElementById('history-btn')?.addEventListener('click', openHistory);
   document.getElementById('history-close-btn')?.addEventListener('click', closeHistory);
+  document.getElementById('battery-close-btn')?.addEventListener('click', closeBatteryDetail);
   document.getElementById('settings-uconnect-btn')?.addEventListener('click', openUconnectSetup);
   document.getElementById('uconnect-close-btn')?.addEventListener('click', closeUconnectSetup);
   document.getElementById('uconnect-form')?.addEventListener('submit', saveUconnectCredentials);

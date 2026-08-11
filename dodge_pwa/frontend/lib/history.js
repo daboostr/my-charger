@@ -208,6 +208,45 @@ export function deriveChargeSessions(samples) {
   return sessions.filter(s => s.endSoc > s.startSoc);
 }
 
+/**
+ * Summarizes driving after the most recent completed charge session.
+ * Values are kept in km and percentage points so the UI can apply unit
+ * preferences and battery capacity consistently.
+ */
+export function summarizeSinceLastCharge(samples, batteryKwh) {
+  const ordered = [...samples].sort((a, b) => a.t - b.t);
+  const sessions = deriveChargeSessions(ordered);
+  const lastCharge = sessions[sessions.length - 1];
+  const baseline = lastCharge ? lastCharge.end : null;
+  const afterCharge = baseline == null
+    ? ordered
+    : ordered.filter(sample => sample.t > baseline);
+
+  let distanceKm = 0;
+  let socUsed = 0;
+  for (let i = 1; i < afterCharge.length; i++) {
+    const prev = afterCharge[i - 1];
+    const current = afterCharge[i];
+    if (prev.odo != null && current.odo != null) {
+      const distance = current.odo - prev.odo;
+      if (distance > ODO_EPSILON_KM) distanceKm += distance;
+    }
+    if (prev.soc != null && current.soc != null) {
+      const used = prev.soc - current.soc;
+      if (used > 0) socUsed += used;
+    }
+  }
+
+  const kwhUsed = batteryKwh ? (socUsed / 100) * batteryKwh : null;
+  return {
+    since: baseline,
+    distanceKm,
+    socUsed,
+    kwhUsed,
+    efficiencyKmPerKwh: kwhUsed && distanceKm > 0 ? distanceKm / kwhUsed : null,
+  };
+}
+
 /** Rolls trips + charge sessions into the numbers shown on the stats screen. */
 export function summarize(trips, sessions, batteryKwh) {
   const distanceKm = trips.reduce((a, t) => a + t.distanceKm, 0);
