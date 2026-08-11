@@ -25,12 +25,12 @@ manager used to open it.
 
 ## Screenshots
 
-### Launch splash
+### Initial setup
 
-![My Charger launch splash](docs/screenshots/launch-splash.png)
+![My Charger credential setup](docs/screenshots/credentials.png)
 
-The approved original Charger silhouette is used as the launch and launcher artwork, recolored red
-for visibility against the dark Android theme.
+The initial setup screen explains Android Keystore protection and collects the Uconnect email,
+password, and PIN before verification.
 
 ### Dashboard
 
