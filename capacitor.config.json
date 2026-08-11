@@ -1,6 +1,6 @@
 {
   "appId": "dev.charger.app",
-  "appName": "Charger",
+  "appName": "My Charger",
   "webDir": "dodge_pwa/frontend",
   "server": {
     "androidScheme": "https"

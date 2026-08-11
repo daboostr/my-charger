@@ -220,6 +220,15 @@ function showLogin(message = '') {
   document.getElementById('app').classList.remove('visible');
 }
 
+function playLaunchSplash() {
+  const splash = document.getElementById('launch-splash');
+  if (!splash) return;
+  window.setTimeout(() => {
+    splash.classList.add('is-hidden');
+    window.setTimeout(() => splash.classList.add('is-removed'), 450);
+  }, 1250);
+}
+
 async function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('visible');
@@ -1548,6 +1557,7 @@ function initNativeUi() {
 
   updateHistoryButton();
   refreshNativeSettings();
+  playLaunchSplash();
   checkSession();
 }
 

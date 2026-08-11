@@ -55,6 +55,34 @@ button {
   touch-action: manipulation;
 }
 
+/* ---------- Launch splash ---------- */
+
+#launch-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+#launch-splash img {
+  width: min(300px, 78vw);
+  height: auto;
+}
+
+#launch-splash.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#launch-splash.is-removed {
+  display: none;
+}
+
 /* ---------- Login screen ---------- */
 
 #login-screen {
@@ -65,6 +93,13 @@ button {
   justify-content: center;
   gap: 20px;
   padding: 24px;
+}
+
+.brand-logo {
+  width: min(320px, 86vw);
+  height: auto;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
 }
 
 #login-screen h1 {

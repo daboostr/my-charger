@@ -1,6 +1,6 @@
-# Charger for Android
+# My Charger for Android
 
-Charger is an Android-only Capacitor app for Dodge/Stellantis Uconnect vehicles. It shows vehicle
+My Charger is an Android-only Capacitor app for Dodge/Stellantis Uconnect vehicles. It shows vehicle
 status, supports remote commands, records driving samples, and derives trip and charging history.
 
 ```
@@ -10,6 +10,39 @@ Android app (Capacitor + native plugins) ────> Stellantis API
 
 There is no Cloudflare account, Worker, Pages deployment, browser login, or web proxy. Native
 Android HTTP is required because most Stellantis auth endpoints do not send CORS headers.
+
+## Download
+
+Download the latest debug APK directly from this repository:
+
+[**My-Charger-debug.apk**](downloads/My-Charger-debug.apk)
+
+On an Android phone, download the APK, allow installation from the browser or file manager when
+prompted, and install it. The package is `dev.charger.app` and the launcher label is **My Charger**.
+This is a debug build intended for personal testing; it is not signed for Google Play distribution.
+
+## Screenshots
+
+### Launch splash
+
+![My Charger launch splash](docs/screenshots/launch-splash.png)
+
+The approved original Charger silhouette is used as the launch and launcher artwork, recolored red
+for visibility against the dark Android theme.
+
+### Dashboard
+
+![My Charger dashboard](docs/screenshots/dashboard.png)
+
+The dashboard shows battery state, range, charge status, tire pressure, odometer, location, and
+remote vehicle commands.
+
+### Driving history
+
+![My Charger driving history](docs/screenshots/history.png)
+
+History summarizes distance, trips, efficiency, energy added, and charge sessions over selectable
+time ranges.
 
 ## Build
 
