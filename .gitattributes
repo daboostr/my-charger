@@ -1,0 +1,13 @@
+# Force LF line endings everywhere, regardless of what a given machine's
+# Git core.autocrlf setting does. This matters most for run.sh - it's a
+# bash script with a #!/usr/bin/with-contenv bashio shebang, and if that
+# line ever gets checked out with CRLF endings (e.g. on Windows with
+# autocrlf=true), the container fails to start entirely, since the shell
+# looks for a program literally named "bashio\r".
+* text=auto eol=lf
+
+# Binary files - never touch these regardless of the above.
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary

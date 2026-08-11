@@ -1,0 +1,39 @@
+# Local secrets / env files - never commit real credentials
+**/.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor/OS cruft
+.DS_Store
+.vscode/
+*.swp
+
+# Anything a contributor might accidentally drop in while testing locally
+**/entities.local.yaml
+**/layout.local.json
+
+# Android build output and signing material.
+*.keystore
+*.jks
+android/app/
+android/build/
+android/gradle/
+android/gradlew
+android/gradlew.bat
+android/.gradle/
+android/*.apk
+android/*.aab
+android/*.idsig
+android/store_icon.png
+android/build.gradle
+android/settings.gradle
+android/gradle.properties
+android/local.properties
+node_modules/
+android/
+
+# Playwright MCP scratch output
+.playwright-mcp/

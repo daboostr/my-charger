@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>My Charger</title>
+
+  <meta name="theme-color" content="#0A0C0F" />
+  <meta name="color-scheme" content="dark" />
+
+  <link rel="icon" href="/icons/my-charger-logo.png" type="image/png" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@12/dist/gridstack.min.css" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <div id="launch-splash" role="status" aria-label="Launching My Charger">
+    <img src="/icons/my-charger-logo.png" alt="My Charger" />
+  </div>
+
+  <!-- Login -->
+  <div id="login-screen">
+    <img class="brand-logo" src="/icons/my-charger-logo.png" alt="My Charger" />
+    <h1>My Charger</h1>
+    <div class="subtitle">Connected to your vehicle</div>
+    <p class="login-description">Sign in directly to your Dodge/Uconnect account. Your credentials stay encrypted on this phone.</p>
+    <button id="login-direct-btn">Connect to your vehicle</button>
+    <div id="login-error"></div>
+  </div>
+
+  <!-- App -->
+  <div id="app">
+    <header class="topbar">
+      <div class="vehicle-name" id="vehicle-name">Charger</div>
+      <div class="topbar-right">
+        <span><span class="status-dot" id="status-dot"></span><span id="status-text">connecting</span></span>
+        <button class="icon-btn" id="history-btn" title="Driving history" aria-label="Driving history" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
+        </button>
+        <button class="icon-btn" id="settings-btn" title="Entity mapping" aria-label="Entity mapping">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        </button>
+        <button class="icon-btn" id="edit-layout-btn" title="Edit layout" aria-label="Edit layout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </button>
+        <button class="logout-link" id="logout-btn">Log out</button>
+      </div>
+    </header>
+
+    <div class="edit-bar" id="edit-bar">
+      <span>Drag to move, corner to resize</span>
+      <button class="edit-bar-done" id="edit-done-btn">Done</button>
+    </div>
+
+    <div class="scroll-area" id="scroll-area">
+      <div id="vehicle-photo-banner" style="display:none">
+        <img id="vehicle-photo-img" alt="Vehicle photo" />
+      </div>
+      <div class="grid-stack" id="dashboard-grid"></div>
+    </div>
+
+    <div class="command-bar" id="command-bar"></div>
+  </div>
+
+  <!-- App Info overlay -->
+  <div id="settings-screen">
+    <header class="settings-topbar">
+      <button class="icon-btn" id="settings-close-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="settings-title">Settings</div>
+      <div style="width:36px"></div>
+    </header>
+    <div class="settings-body" id="settings-body">
+      <div class="info-row">
+        <div class="info-label">Vehicle</div>
+        <div class="info-value" id="info-vehicle">--</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">VIN</div>
+        <div class="info-value info-value-mono" id="info-vin">--</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Last refresh</div>
+        <div class="info-value" id="info-last-refresh">--</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Data source</div>
+        <div class="info-value info-value-small">Direct Android connection → Stellantis</div>
+      </div>
+
+      <h2>Vehicle</h2>
+      <div class="settings-row">
+        <div class="settings-row-label">Name</div>
+        <input type="text" id="settings-vehicle-name" class="settings-input" placeholder="Dodge" />
+        <button class="settings-row-btn" id="settings-save-name">Save</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-label">Battery Capacity</div>
+        <input type="number" id="settings-battery-kwh" class="settings-input" placeholder="kWh" min="1" max="999" step="0.1" style="max-width:80px" />
+        <button class="settings-row-btn" id="settings-save-battery">Save</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-label">Photo</div>
+        <div class="settings-photo-actions">
+          <button class="settings-row-btn" id="settings-choose-photo">Choose</button>
+          <button class="settings-row-btn" id="settings-remove-photo" style="display:none">Remove</button>
+        </div>
+        <input type="file" id="settings-photo-input" accept="image/*" style="display:none" />
+      </div>
+      <div id="settings-photo-preview-wrap" style="display:none">
+        <img id="settings-photo-preview" alt="Vehicle photo preview" />
+      </div>
+
+      <h2>Units</h2>
+      <div class="settings-row">
+        <div class="settings-row-label">Distance</div>
+        <div class="toggle-group" id="units-toggle">
+          <button class="toggle-btn active" data-value="imperial">Miles</button>
+          <button class="toggle-btn" data-value="metric">km</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-label">Tire Pressure</div>
+        <div class="toggle-group" id="pressure-toggle">
+          <button class="toggle-btn active" data-value="psi">psi</button>
+          <button class="toggle-btn" data-value="kpa">kPa</button>
+        </div>
+      </div>
+
+      <h2>Hero Data</h2>
+      <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+        <div class="settings-row-label">Right column (select up to 5)</div>
+        <div id="hero-right-settings" class="hero-right-settings"></div>
+      </div>
+
+      <div id="native-settings">
+        <h2>Vehicle Account</h2>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Connection</div>
+            <div class="settings-row-value" id="connection-mode-value">--</div>
+          </div>
+          <button class="settings-row-btn" id="settings-uconnect-btn">Set up</button>
+        </div>
+
+        <h2>History Folder</h2>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Synced folder</div>
+            <div class="settings-row-value" id="folder-status-value">Not set</div>
+          </div>
+          <button class="settings-row-btn" id="settings-folder-btn">Choose</button>
+        </div>
+        <div class="settings-hint">
+          Pick a folder inside Google Drive, Dropbox or OneDrive and that app will
+          sync your driving history to your other devices.
+        </div>
+
+        <h2>Sound</h2>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Startup sound</div>
+            <div class="settings-row-value">Play the Charger sound when the app launches</div>
+          </div>
+          <button class="settings-row-btn" id="settings-startup-sound-btn" type="button">On</button>
+        </div>
+      </div>
+
+      <h2>Layout</h2>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Reset to defaults</div>
+          <div class="settings-row-value">Restore tile positions and visibility</div>
+        </div>
+        <button class="settings-row-btn" id="settings-reset-layout">Reset</button>
+      </div>
+
+      <div class="info-actions">
+        <button class="action-danger" id="settings-logout-btn">Log out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Uconnect credential setup (native only) -->
+  <div id="uconnect-screen">
+    <header class="settings-topbar">
+      <button class="icon-btn" id="uconnect-close-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="settings-title">Vehicle Account</div>
+      <div style="width:36px"></div>
+    </header>
+    <div class="settings-body">
+      <div class="settings-hint">
+        These are your Dodge/Uconnect app credentials. They're stored encrypted
+        on this phone using the Android Keystore and sent only to Stellantis.
+      </div>
+      <form id="uconnect-form" class="uconnect-form">
+        <input type="email" id="uconnect-email" placeholder="Uconnect email" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+        <input type="password" id="uconnect-password" placeholder="Uconnect password" autocomplete="current-password" required />
+        <input type="text" id="uconnect-pin" placeholder="4-digit Uconnect PIN" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" />
+        <button type="submit" id="uconnect-save">Verify &amp; Save</button>
+      </form>
+      <div id="uconnect-error"></div>
+      <div class="info-actions">
+        <button class="action-danger" id="uconnect-clear">Remove saved credentials</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Driving history / stats -->
+  <div id="history-screen">
+    <header class="settings-topbar">
+      <button class="icon-btn" id="history-close-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="settings-title">History</div>
+      <div style="width:36px"></div>
+    </header>
+    <div class="settings-body">
+      <div class="toggle-group history-range" id="history-range">
+        <button class="toggle-btn active" data-days="7">7d</button>
+        <button class="toggle-btn" data-days="30">30d</button>
+        <button class="toggle-btn" data-days="90">90d</button>
+        <button class="toggle-btn" data-days="0">All</button>
+      </div>
+
+      <div class="stat-grid" id="history-summary"></div>
+
+      <h2>Trips</h2>
+      <div id="history-trips" class="history-list"></div>
+
+      <h2>Charge Sessions</h2>
+      <div id="history-charges" class="history-list"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Widget content templates (cloned by app.js, never shown directly) -->
+  <template id="tpl-hero">
+    <div class="hero">
+      <div class="hero-left">
+        <div class="batt-pct"><span data-role="batt-pct-val">--</span><span class="batt-pct-unit">%</span></div>
+        <div class="batt-body">
+          <div class="batt-nub"></div>
+          <div class="batt-case">
+            <div class="batt-fill" data-role="batt-fill"></div>
+            <div class="batt-line" style="bottom:80%"></div>
+            <div class="batt-line" style="bottom:60%"></div>
+            <div class="batt-line" style="bottom:40%"></div>
+            <div class="batt-line" style="bottom:20%"></div>
+          </div>
+        </div>
+        <div class="batt-kwh" data-role="batt-kwh">-- kWh</div>
+        <!-- Charge status in portrait (hidden in landscape via CSS) -->
+        <div class="batt-charge-status hero-portrait-status" data-role="batt-charge-status">
+          <div class="batt-charge-line1" data-role="charge-line1">--</div>
+          <div class="batt-charge-line2" data-role="charge-line2">--</div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <!-- Grid: landscape charge status (item 1) + configurable data items (populated by app.js) -->
+        <div class="hero-right-items" data-role="hero-right-items">
+          <!-- Charge status: hidden in portrait, first grid item in landscape -->
+          <div class="batt-charge-status hero-landscape-status" data-role="landscape-charge-status">
+            <div class="batt-charge-line1" data-role="landscape-charge-line1">--</div>
+            <div class="batt-charge-line2" data-role="landscape-charge-line2">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-stat">
+    <div class="tile">
+      <div class="tile-label" data-role="label"></div>
+      <div class="tile-value" data-role="value">--</div>
+    </div>
+  </template>
+
+  <template id="tpl-lock_status">
+    <div class="tile">
+      <div class="tile-label" data-role="label"></div>
+      <div class="tile-value" data-role="value">--</div>
+    </div>
+  </template>
+
+  <template id="tpl-tire_grid">
+    <div class="tile">
+      <div class="tile-label">Tire Pressure</div>
+      <div class="tire-grid">
+        <div class="tire-cell" data-wheel="fl"><span class="tire-pos">FL</span><span class="tire-psi">--</span></div>
+        <div class="tire-cell" data-wheel="fr"><span class="tire-pos">FR</span><span class="tire-psi">--</span></div>
+        <div class="tire-cell" data-wheel="rl"><span class="tire-pos">RL</span><span class="tire-psi">--</span></div>
+        <div class="tire-cell" data-wheel="rr"><span class="tire-pos">RR</span><span class="tire-psi">--</span></div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-location">
+    <div class="location-row">
+      <a href="#" class="location-link" data-role="link" target="_blank" rel="noopener">
+        <span>Open location in Maps</span>
+        <span class="dim" data-role="updated">--</span>
+      </a>
+    </div>
+  </template>
+
+  <template id="tpl-charge_times">
+    <div class="tile">
+      <div class="tile-label">Time to Full</div>
+      <div class="charge-times-row">
+        <div class="charge-times-cell"><span class="tire-pos">L1</span><span class="charge-time-val" data-role="l1">--</span></div>
+        <div class="charge-times-cell"><span class="tire-pos">L2</span><span class="charge-time-val" data-role="l2">--</span></div>
+        <div class="charge-times-cell"><span class="tire-pos">L3</span><span class="charge-time-val" data-role="l3">--</span></div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-command_button">
+    <button class="cmd-tile" data-role="btn">
+      <span class="cmd-tile-icon" data-role="icon"></span>
+      <span class="cmd-tile-label" data-role="label"></span>
+    </button>
+  </template>
+
+  <template id="tpl-binary_status">
+    <div class="tile">
+      <div class="tile-label" data-role="label"></div>
+      <div class="tile-value" data-role="value">--</div>
+    </div>
+  </template>
+
+  <template id="tpl-timestamp">
+    <div class="tile">
+      <div class="tile-label" data-role="label"></div>
+      <div class="tile-value tile-value-small" data-role="value">--</div>
+    </div>
+  </template>
+
+  <template id="tpl-select_cycle">
+    <div class="tile select-cycle">
+      <div class="tile-label" data-role="label"></div>
+      <div class="select-cycle-row">
+        <button class="select-cycle-btn" data-role="prev">&minus;</button>
+        <div class="tile-value" data-role="value">--</div>
+        <button class="select-cycle-btn" data-role="next">&plus;</button>
+      </div>
+    </div>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/gridstack@12/dist/gridstack-all.js"></script>
+  <script type="module" src="/lib/native-bridge.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

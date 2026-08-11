@@ -1,0 +1,13 @@
+{
+  "appId": "dev.charger.app",
+  "appName": "My Charger",
+  "webDir": "dodge_pwa/frontend",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

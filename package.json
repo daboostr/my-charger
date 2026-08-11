@@ -1,0 +1,21 @@
+{
+  "name": "charger-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Android-only Dodge/Stellantis vehicle app with on-device credentials and synced driving history.",
+  "scripts": {
+    "test": "node tests/history.test.mjs",
+    "sync": "cap sync android",
+    "android:open": "cap open android",
+    "android:build": "cd android && gradlew.bat assembleDebug",
+    "android:beta": "cd android && gradlew.bat assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}
