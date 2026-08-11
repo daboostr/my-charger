@@ -13,13 +13,15 @@ Android HTTP is required because most Stellantis auth endpoints do not send CORS
 
 ## Download
 
-Download the latest debug APK directly from this repository:
+Download the latest beta APK directly from this repository:
 
-[**My-Charger-debug.apk**](downloads/My-Charger-debug.apk)
+[**My-Charger-beta.apk**](downloads/My-Charger-beta.apk)
 
 On an Android phone, download the APK, allow installation from the browser or file manager when
 prompted, and install it. The package is `dev.charger.app` and the launcher label is **My Charger**.
-This is a debug build intended for personal testing; it is not signed for Google Play distribution.
+This is a signed beta release for direct Android distribution. It is not signed for Google Play
+distribution, so Android may require enabling **Install unknown apps** for the browser or file
+manager used to open it.
 
 ## Screenshots
 
@@ -72,10 +74,10 @@ npm run sync
 npm run android:open
 ```
 
-Build a debug APK:
+Build a beta release APK:
 
 ```bash
-npm run android:build
+npm run android:beta
 ```
 
 The custom plugins are in `android-app/app/src/main/java/dev/charger/app/`:

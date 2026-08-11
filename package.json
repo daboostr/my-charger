@@ -8,7 +8,8 @@
     "test": "node tests/history.test.mjs",
     "sync": "cap sync android",
     "android:open": "cap open android",
-    "android:build": "cd android && gradlew.bat assembleDebug"
+    "android:build": "cd android && gradlew.bat assembleDebug",
+    "android:beta": "cd android && gradlew.bat assembleRelease"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",
