@@ -1340,6 +1340,11 @@ async function refreshNativeSettings() {
   const folder = await window.Charger.historyStore.folderName();
   document.getElementById('folder-status-value').textContent = folder || 'Not set';
   document.getElementById('settings-folder-btn').textContent = folder ? 'Change' : 'Choose';
+
+  const soundEnabled = await window.Charger.startupSound.isEnabled();
+  const soundBtn = document.getElementById('settings-startup-sound-btn');
+  soundBtn.textContent = soundEnabled ? 'On' : 'Off';
+  soundBtn.setAttribute('aria-pressed', String(soundEnabled));
 }
 
 function openUconnectSetup() {
@@ -1524,6 +1529,11 @@ function initNativeUi() {
   document.getElementById('uconnect-form')?.addEventListener('submit', saveUconnectCredentials);
   document.getElementById('uconnect-clear')?.addEventListener('click', clearUconnectCredentials);
   document.getElementById('settings-folder-btn')?.addEventListener('click', chooseHistoryFolder);
+  document.getElementById('settings-startup-sound-btn')?.addEventListener('click', async () => {
+    const enabled = !(await window.Charger.startupSound.isEnabled());
+    await window.Charger.startupSound.setEnabled(enabled);
+    await refreshNativeSettings();
+  });
 
   document.querySelectorAll('#history-range .toggle-btn').forEach(btn => {
     btn.addEventListener('click', async () => {

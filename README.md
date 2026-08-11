@@ -58,6 +58,7 @@ The generated project is intentionally not committed.
    they are stored.
 3. Open Settings → **History Folder → Choose**.
 4. Select a folder inside Google Drive, Dropbox, or OneDrive if history should sync between phones.
+5. Use Settings → **Startup sound** to turn the launch sound on or off.
 
 The History screen reports distance, trip count, efficiency, energy added, and individual trip and
 charge sessions over 7, 30, 90 days, or all time.
@@ -81,6 +82,9 @@ in Settings.
 capacitor.config.json
 android-app/                         custom native plugin sources
   app/src/main/java/dev/charger/app/
+    StartupSoundPlugin.java           bundled launch sound and preference
+  app/src/main/res/raw/
+    startup_sound.ogg                 launch sound asset
 package.json
 tests/history.test.mjs               trip/charge derivation tests
 dodge_pwa/frontend/

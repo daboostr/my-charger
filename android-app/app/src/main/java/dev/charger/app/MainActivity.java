@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(SecureStorePlugin.class);
         registerPlugin(SyncedFolderPlugin.class);
+        registerPlugin(StartupSoundPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
